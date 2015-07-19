@@ -1,0 +1,15 @@
+parameters:
+#    sfes.logging.path: %kernel.logs_dir%/elasticsearch_%kernel.environment%.log
+#    sfes.export.class: ONGR\ElasticsearchBundle\Service\ExportService
+#    sfes.import.class: ONGR\ElasticsearchBundle\Service\ImportService
+#    sfes.client.index_suffix_finder.class: ONGR\ElasticsearchBundle\Client\IndexSuffixFinder
+
+services:
+#    sfes.export:
+#        class: %sfes.export.class%
+#
+#    sfes.import:
+#        class: %sfes.import.class%
+#
+#    sfes.client.index_suffix_finder:
+#        class: %sfes.client.index_suffix_finder.class%
