@@ -22,35 +22,74 @@ class MappingPass implements CompilerPassInterface
         $connections = $container->getParameter('sfes.connections');
         $indices = $container->getParameter('sfes.indices');
 
-        // Go through each defined index
+        // Go through each defined connection and register a manager service for each
+        foreach ($connections as $connectionName => $connectionSettings) {
+            $connectionName = strtolower($connectionName);
+
+            $client = new Definition(
+                'Elasticsearch\Client',
+                [
+                    $this->getClientParams($connectionSettings, $container),
+                ]
+            );
+            $connectionDefinition = new Definition(
+                'Sineflow\ElasticsearchBundle\Client\Connection',
+                [
+                    $client,
+                    $connectionSettings,
+                ]
+            );
+
+            $container->setDefinition(
+                sprintf('sfes.connection.%s', $connectionName),
+                $connectionDefinition
+            );
+
+            if ($connectionName === 'default') {
+                $container->setAlias('sfes.connection', 'sfes.connection.default');
+            }
+        }
+
+        // Go through each defined index and register a manager service for each
         foreach ($indices as $indexManagerName => $indexSettings) {
             // Skip abstract index definitions, as they are only used as templates for real ones
             if (isset($indexSettings['abstract']) && true === $indexSettings['abstract']) {
                 continue;
             }
-            // TODO: register index managers services
 
             $typesMetadata = $this->getTypesMetadata($container, $indexSettings);
 
-//            \Symfony\Component\VarDumper\VarDumper::dump($typesMetadata);die;
-
-            $classMetadataCollection = new Definition(
+            // TODO: Do we need this ClassMetadataCollection wrapper at all? Why not use $typesMetadata directly
+            $typesMetadataCollection = new Definition(
                 'Sineflow\ElasticsearchBundle\Mapping\ClassMetadataCollection',
                 [
                     $typesMetadata,
                 ]
             );
 
+            // Make sure the connection service definition exists
+            $connectionService = sprintf('sfes.connection.%s', $indexSettings['connection']);
+            if (!$container->hasDefinition($connectionService)) {
+                throw new InvalidConfigurationException(
+                    'There is no ES connection with name ' . $indexSettings['connection']
+                );
+            }
+
             $indexManagerDefinition = new Definition(
-                'Sineflow\ElasticsearchBundle\ORM\Manager',
+                'Sineflow\ElasticsearchBundle\ORM\IndexManager',
                 [
-                    $this->getConnectionDefinition($container, $connections, $indexSettings),
-                    $classMetadataCollection,
+                    $container->findDefinition($connectionService),
+                    $typesMetadataCollection,
+                    $this->getIndexParams($indexSettings, $container),
                 ]
             );
 
+            $indexManagerDefinition->addMethodCall('setUseAliases', [$indexSettings['use_aliases']]);
+
+//            $this->setWarmers($connection, $settings['connection'], $container);
+
             $container->setDefinition(
-                sprintf('es.manager.%s', strtolower($indexManagerName)),
+                sprintf('sfes.index.%s', strtolower($indexManagerName)),
                 $indexManagerDefinition
             );
         }
@@ -117,43 +156,43 @@ class MappingPass implements CompilerPassInterface
 //        return $out;
 //    }
 
-    /**
-     * Builds connection definition.
-     *
-     * @param ContainerBuilder $container
-     * @param array            $connections
-     * @param array            $indexSettings
-     *
-     * @return Definition
-     *
-     * @throws InvalidConfigurationException
-     */
-    private function getConnectionDefinition(ContainerBuilder $container, $connections, $indexSettings)
-    {
-        if (!isset($connections[$indexSettings['connection']])) {
-            throw new InvalidConfigurationException(
-                'There is no ES connection with name ' . $indexSettings['connection']
-            );
-        }
-
-        $client = new Definition(
-            'Elasticsearch\Client',
-            [
-                $this->getClientParams($connections[$indexSettings['connection']], $container),
-            ]
-        );
-        $connection = new Definition(
-            'Sineflow\ElasticsearchBundle\Client\Connection',
-            [
-                $client,
-                $this->getIndexParams($connections[$indexSettings['connection']], $indexSettings, $container),
-            ]
-        );
-
-        $this->setWarmers($connection, $indexSettings['connection'], $container);
-
-        return $connection;
-    }
+//    /**
+//     * Builds connection definition.
+//     *
+//     * @param ContainerBuilder $container
+//     * @param array            $connections
+//     * @param array            $indexSettings
+//     *
+//     * @return Definition
+//     *
+//     * @throws InvalidConfigurationException
+//     */
+//    private function getConnectionDefinition(ContainerBuilder $container, $connections, $indexSettings)
+//    {
+//        if (!isset($connections[$indexSettings['connection']])) {
+//            throw new InvalidConfigurationException(
+//                'There is no ES connection with name ' . $indexSettings['connection']
+//            );
+//        }
+//
+//        $client = new Definition(
+//            'Elasticsearch\Client',
+//            [
+//                $this->getClientParams($connections[$indexSettings['connection']], $container),
+//            ]
+//        );
+//        $connection = new Definition(
+//            'Sineflow\ElasticsearchBundle\Client\Connection',
+//            [
+//                $client,
+//                $this->getIndexParams($connections[$indexSettings['connection']], $indexSettings, $container),
+//            ]
+//        );
+//
+//        $this->setWarmers($connection, $indexSettings['connection'], $container);
+//
+//        return $connection;
+//    }
 
     /**
      * Returns params for ES client.
@@ -167,8 +206,9 @@ class MappingPass implements CompilerPassInterface
     {
         $params = ['hosts' => $connectionSettings['hosts']];
 
-        if (!empty($connectionSettings['auth'])) {
-            $params['connectionParams']['auth'] = array_values($connectionSettings['auth']);
+        // TODO: handle this better, maybe with OptionsResolver
+        if (!empty($connectionSettings['params']['auth'])) {
+            $params['connectionParams']['auth'] = array_values($connectionSettings['params']['auth']);
         }
 
         if ($connectionSettings['logging'] === true) {
@@ -188,27 +228,26 @@ class MappingPass implements CompilerPassInterface
     /**
      * Returns params for index.
      *
-     * @param array            $connectionSettings
      * @param array            $indexSettings
      * @param ContainerBuilder $container
      *
      * @return array
      */
-    private function getIndexParams(array $connectionSettings, array $indexSettings, ContainerBuilder $container)
+    private function getIndexParams(array $indexSettings, ContainerBuilder $container)
     {
-        $index = ['index' => $connectionSettings['index_name']];
+        $index = ['index' => $indexSettings['name']];
 
-        if (!empty($connectionSettings['settings'])) {
-            $index['body']['settings'] = $connectionSettings['settings'];
+        if (!empty($indexSettings['settings'])) {
+            $index['body']['settings'] = $indexSettings['settings'];
         }
 
         $mappings = [];
-        /** @var MetadataCollector $metadataCollector */
-        $metadataCollector = $container->get('es.metadata_collector');
+        /** @var DocumentMetadataCollector $metadataCollector */
+        $metadataCollector = $container->get('sfes.document_metadata_collector');
         $paths = [];
 
-        if (!empty($indexSettings['mappings'])) {
-            $bundles = $indexSettings['mappings'];
+        if (!empty($indexSettings['types'])) {
+            $bundles = $indexSettings['types'];
         } else {
             $bundles = array_keys($container->getParameter('kernel.bundles'));
         }
@@ -218,13 +257,13 @@ class MappingPass implements CompilerPassInterface
                 $mappings,
                 $metadataCollector->getClientMapping($bundle)
             );
-            $paths = array_replace($paths, $metadataCollector->getProxyPaths());
+//            $paths = array_replace($paths, $metadataCollector->getProxyPaths());
         }
 
-        if ($container->hasParameter('es.proxy_paths')) {
-            $paths = array_replace($paths, $container->getParameter('es.proxy_paths'));
-        }
-        $container->setParameter('es.proxy_paths', $paths);
+//        if ($container->hasParameter('es.proxy_paths')) {
+//            $paths = array_replace($paths, $container->getParameter('es.proxy_paths'));
+//        }
+//        $container->setParameter('es.proxy_paths', $paths);
 
         if (!empty($mappings)) {
             $index['body']['mappings'] = $mappings;
@@ -233,33 +272,35 @@ class MappingPass implements CompilerPassInterface
         return $index;
     }
 
-    /**
-     * Returns warmers for client.
-     *
-     * @param Definition       $connectionDefinition
-     * @param string           $connection
-     * @param ContainerBuilder $container
-     *
-     * @return array
-     *
-     * @throws \LogicException If connection is not found.
-     */
-    private function setWarmers($connectionDefinition, $connection, ContainerBuilder $container)
-    {
-        $warmers = [];
-        foreach ($container->findTaggedServiceIds('sfes.warmer') as $id => $tags) {
-            if (array_key_exists('manager', $tags[0])) {
-                $connections = [];
-                if (strpos($tags[0]['manager'], ',')) {
-                    $connections = explode(',', $tags[0]['manager']);
-                }
-
-                if (in_array($connection, $connections) || $tags[0]['manager'] === $connection) {
-                    $connectionDefinition->addMethodCall('addWarmer', [new Reference($id)]);
-                }
-            }
-        }
-
-        return $warmers;
-    }
+//    /**
+//     * Returns warmers for client.
+//     *
+//     * @param Definition       $connectionDefinition
+//     * @param string           $connection
+//     * @param ContainerBuilder $container
+//     *
+//     * @return array
+//     *
+//     * @throws \LogicException If connection is not found.
+//     *
+//     * TODO: warmers should be set to an index
+//     */
+//    private function setWarmers($connectionDefinition, $connection, ContainerBuilder $container)
+//    {
+//        $warmers = [];
+//        foreach ($container->findTaggedServiceIds('sfes.warmer') as $id => $tags) {
+//            if (array_key_exists('manager', $tags[0])) {
+//                $connections = [];
+//                if (strpos($tags[0]['manager'], ',')) {
+//                    $connections = explode(',', $tags[0]['manager']);
+//                }
+//
+//                if (in_array($connection, $connections) || $tags[0]['manager'] === $connection) {
+//                    $connectionDefinition->addMethodCall('addWarmer', [new Reference($id)]);
+//                }
+//            }
+//        }
+//
+//        return $warmers;
+//    }
 }

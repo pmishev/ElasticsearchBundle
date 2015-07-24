@@ -3,7 +3,7 @@
 namespace Sineflow\ElasticsearchBundle\Mapping;
 
 /**
- * Holds gathered metadata for manager.
+ * Holds gathered metadata from all document entities.
  */
 class ClassMetadataCollection
 {
@@ -23,6 +23,16 @@ class ClassMetadataCollection
     public function __construct(array $metadata)
     {
         $this->metadata = $metadata;
+    }
+
+    /**
+     * Return a list of type namespaces
+     *
+     * @return array
+     */
+    public function getTypes()
+    {
+        return array_keys($this->metadata);
     }
 
     /**

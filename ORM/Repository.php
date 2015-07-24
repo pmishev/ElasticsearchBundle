@@ -302,7 +302,7 @@ class Repository
                 'id' => $id,
             ];
 
-            $response = $this->getManager()->getConnection()->delete($params);
+            $response = $this->getManager()->getConnection()->getClient()->delete($params);
 
             return $response;
         } else {

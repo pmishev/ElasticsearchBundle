@@ -97,13 +97,13 @@ class SineflowElasticsearchExtension extends Extension
             ]
         );
 
-        $proxyLoader = new Definition(
-            'Sineflow\ElasticsearchBundle\Mapping\Proxy\ProxyLoader',
-            [
-                $this->getCacheDir($container, 'proxies'),
-                $container->getParameter('kernel.debug'),
-            ]
-        );
+//        $proxyLoader = new Definition(
+//            'Sineflow\ElasticsearchBundle\Mapping\Proxy\ProxyLoader',
+//            [
+//                $this->getCacheDir($container, 'proxies'),
+//                $container->getParameter('kernel.debug'),
+//            ]
+//        );
 
 //        $metadataCollector = new Definition(
 //            'Sineflow\ElasticsearchBundle\Mapping\MetadataCollector',
