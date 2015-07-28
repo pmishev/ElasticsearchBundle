@@ -1,6 +1,6 @@
 <?php
 
-namespace Sineflow\ElasticsearchBundle\ORM;
+namespace Sineflow\ElasticsearchBundle\Document\Repository;
 
 use Elasticsearch\Common\Exceptions\Missing404Exception;
 use Sineflow\ElasticsearchBundle\Document\DocumentInterface;
@@ -19,7 +19,7 @@ use ONGR\ElasticsearchBundle\Result\Suggestion\SuggestionIterator;
 /**
  * Repository class.
  */
-class Repository
+class Repository implements RepositoryInterface
 {
     const RESULTS_ARRAY = 'array';
     const RESULTS_OBJECT = 'object';

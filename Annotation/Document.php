@@ -25,6 +25,11 @@ final class Document implements DumperInterface
     /**
      * @var string
      */
+    public $repositoryClass;
+
+    /**
+     * @var string
+     */
     public $parent;
 
     /**

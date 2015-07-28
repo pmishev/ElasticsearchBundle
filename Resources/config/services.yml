@@ -1,10 +1,16 @@
 parameters:
+    sfes.provider_registry.class: Sineflow\ElasticsearchBundle\Document\Provider\ProviderRegistry
 #    sfes.logging.path: %kernel.logs_dir%/elasticsearch_%kernel.environment%.log
 #    sfes.export.class: ONGR\ElasticsearchBundle\Service\ExportService
 #    sfes.import.class: ONGR\ElasticsearchBundle\Service\ImportService
 #    sfes.client.index_suffix_finder.class: ONGR\ElasticsearchBundle\Client\IndexSuffixFinder
 
 services:
+    sfes.provider_registry:
+        class: %sfes.provider_registry.class%
+        calls:
+            - [setContainer, ["@service_container"]]
+
 #    sfes.export:
 #        class: %sfes.export.class%
 #

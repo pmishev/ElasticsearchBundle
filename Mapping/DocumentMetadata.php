@@ -7,7 +7,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 /**
  * Holds document metadata.
  */
-class ClassMetadata
+class DocumentMetadata
 {
     /**
      * @var array

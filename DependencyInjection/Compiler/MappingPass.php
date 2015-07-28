@@ -33,7 +33,7 @@ class MappingPass implements CompilerPassInterface
                 ]
             );
             $connectionDefinition = new Definition(
-                'Sineflow\ElasticsearchBundle\Client\Connection',
+                'Sineflow\ElasticsearchBundle\Manager\ConnectionManager',
                 [
                     $client,
                     $connectionSettings,
@@ -59,9 +59,8 @@ class MappingPass implements CompilerPassInterface
 
             $typesMetadata = $this->getTypesMetadata($container, $indexSettings);
 
-            // TODO: Do we need this ClassMetadataCollection wrapper at all? Why not use $typesMetadata directly
             $typesMetadataCollection = new Definition(
-                'Sineflow\ElasticsearchBundle\Mapping\ClassMetadataCollection',
+                'Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection',
                 [
                     $typesMetadata,
                 ]
@@ -76,10 +75,11 @@ class MappingPass implements CompilerPassInterface
             }
 
             $indexManagerDefinition = new Definition(
-                'Sineflow\ElasticsearchBundle\ORM\IndexManager',
+                'Sineflow\ElasticsearchBundle\Manager\IndexManager',
                 [
-                    $container->findDefinition($connectionService),
+                    $container->getDefinition($connectionService),
                     $typesMetadataCollection,
+                    $container->getDefinition('sfes.provider_registry'),
                     $this->getIndexParams($indexSettings, $container),
                 ]
             );
@@ -105,94 +105,21 @@ class MappingPass implements CompilerPassInterface
      */
     private function getTypesMetadata(ContainerBuilder $container, $indexSettings)
     {
-        $out = [];
+        $result = [];
 
         /** @var DocumentMetadataCollector $metaCollector */
         $metaCollector = $container->get('sfes.document_metadata_collector');
         foreach ($indexSettings['types'] as $typeClass) {
-            foreach ($metaCollector->getMapping($typeClass) as $typeName => $metadata) {
-                $metadataDefinition = new Definition('Sineflow\ElasticsearchBundle\Mapping\ClassMetadata');
+            foreach ($metaCollector->getMetadataFromClass($typeClass) as $typeName => $metadata) {
+                $metadataDefinition = new Definition('Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata');
                 $metadataDefinition->addArgument([$typeName => $metadata]);
-
-                if (strpos($typeClass, ':') === false) {
-                    $out[$typeClass . ':' . $metadata['class']] = $metadataDefinition;
-                } else {
-                    $out[$typeClass] = $metadataDefinition;
-                }
+                $result[$typeClass] = $metadataDefinition;
             }
         }
 
-        return $out;
+        return $result;
 
     }
-
-//    /**
-//     * Fetches bundles metadata for specific manager settings.
-//     *
-//     * @param ContainerBuilder $container
-//     * @param array            $settings
-//     *
-//     * @return array
-//     */
-//    private function getBundlesMetadata(ContainerBuilder $container, $settings)
-//    {
-//        $out = [];
-//
-//        /** @var MetadataCollector $collector */
-//        $collector = $container->get('sfes.metadata_collector');
-//        foreach ($settings['types'] as $bundle) {
-//            foreach ($collector->getMapping($bundle) as $repository => $metadata) {
-//                $metadataDefinition = new Definition('Sineflow\ElasticsearchBundle\Mapping\ClassMetadata');
-//                $metadataDefinition->addArgument([$repository => $metadata]);
-//
-//                if (strpos($bundle, ':') === false) {
-//                    $out[$bundle . ':' . $metadata['class']] = $metadataDefinition;
-//                } else {
-//                    $out[$bundle] = $metadataDefinition;
-//                }
-//            }
-//        }
-//
-//        return $out;
-//    }
-
-//    /**
-//     * Builds connection definition.
-//     *
-//     * @param ContainerBuilder $container
-//     * @param array            $connections
-//     * @param array            $indexSettings
-//     *
-//     * @return Definition
-//     *
-//     * @throws InvalidConfigurationException
-//     */
-//    private function getConnectionDefinition(ContainerBuilder $container, $connections, $indexSettings)
-//    {
-//        if (!isset($connections[$indexSettings['connection']])) {
-//            throw new InvalidConfigurationException(
-//                'There is no ES connection with name ' . $indexSettings['connection']
-//            );
-//        }
-//
-//        $client = new Definition(
-//            'Elasticsearch\Client',
-//            [
-//                $this->getClientParams($connections[$indexSettings['connection']], $container),
-//            ]
-//        );
-//        $connection = new Definition(
-//            'Sineflow\ElasticsearchBundle\Client\Connection',
-//            [
-//                $client,
-//                $this->getIndexParams($connections[$indexSettings['connection']], $indexSettings, $container),
-//            ]
-//        );
-//
-//        $this->setWarmers($connection, $indexSettings['connection'], $container);
-//
-//        return $connection;
-//    }
 
     /**
      * Returns params for ES client.
@@ -244,18 +171,14 @@ class MappingPass implements CompilerPassInterface
         $mappings = [];
         /** @var DocumentMetadataCollector $metadataCollector */
         $metadataCollector = $container->get('sfes.document_metadata_collector');
-        $paths = [];
+//        $paths = [];
 
-        if (!empty($indexSettings['types'])) {
-            $bundles = $indexSettings['types'];
-        } else {
-            $bundles = array_keys($container->getParameter('kernel.bundles'));
-        }
+        $documentClassNames = $indexSettings['types'];
 
-        foreach ($bundles as $bundle) {
+        foreach ($documentClassNames as $documentClassName) {
             $mappings = array_replace_recursive(
                 $mappings,
-                $metadataCollector->getClientMapping($bundle)
+                $metadataCollector->getClientMapping($documentClassName)
             );
 //            $paths = array_replace($paths, $metadataCollector->getProxyPaths());
         }

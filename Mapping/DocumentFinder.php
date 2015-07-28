@@ -8,7 +8,7 @@ namespace Sineflow\ElasticsearchBundle\Mapping;
 class DocumentFinder
 {
     /**
-     * @var array
+     * @var array All bundles available in the application
      */
     private $bundles;
 
@@ -18,50 +18,11 @@ class DocumentFinder
     private $documentDir = 'Document';
 
     /**
-     * Constructor.
-     *
      * @param array $bundles Parameter kernel.bundles from service container.
      */
     public function __construct(array $bundles)
     {
         $this->bundles = $bundles;
-    }
-
-    /**
-     * Formats namespace from short syntax.
-     *
-     * @param string $namespace
-     *
-     * @return string
-     */
-    public function getNamespace($namespace)
-    {
-        if (strpos($namespace, ':') !== false) {
-            list($bundle, $document) = explode(':', $namespace);
-            $bundle = $this->getBundleClass($bundle);
-            $namespace = substr($bundle, 0, strrpos($bundle, '\\')) . '\\' .
-                str_replace('/', '\\', $this->getDocumentDir()) . '\\' . $document;
-        }
-
-        return $namespace;
-    }
-
-    /**
-     * Returns bundle class namespace else throws an exception.
-     *
-     * @param string $name
-     *
-     * @return string
-     *
-     * @throws \LogicException
-     */
-    public function getBundleClass($name)
-    {
-        if (array_key_exists($name, $this->bundles)) {
-            return $this->bundles[$name];
-        }
-
-        throw new \LogicException(sprintf('Bundle \'%s\' does not exist.', $name));
     }
 
     /**
@@ -85,10 +46,28 @@ class DocumentFinder
     }
 
     /**
+     * Resolves document class name from short syntax.
+     *
+     * @param string $className Short syntax for class name (e.g AppBundle:Product)
+     * @return string
+     */
+    public function resolveClassName($className)
+    {
+        if (strpos($className, ':') !== false) {
+            list($bundleName, $document) = explode(':', $className);
+            $bundleClass = $this->getBundleClass($bundleName);
+            $className = substr($bundleClass, 0, strrpos($bundleClass, '\\')) . '\\' .
+                str_replace('/', '\\', $this->getDocumentDir()) . '\\' . $document;
+        }
+
+        return $className;
+    }
+
+    /**
      * Returns bundle document paths.
      *
+     * TODO: remove this method, as we don't need to get all documents defined in a bundle - they must be explicitly defined for each index manager
      * @param string $bundle
-     *
      * @return array
      */
     public function getBundleDocumentPaths($bundle)
@@ -100,5 +79,21 @@ class DocumentFinder
             DIRECTORY_SEPARATOR . str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $this->getDocumentDir()) .
             DIRECTORY_SEPARATOR . '*.php'
         );
+    }
+
+    /**
+     * Returns bundle class name
+     *
+     * @param string $bundleName
+     * @return string
+     * @throws \LogicException
+     */
+    private function getBundleClass($bundleName)
+    {
+        if (array_key_exists($bundleName, $this->bundles)) {
+            return $this->bundles[$bundleName];
+        }
+
+        throw new \LogicException(sprintf('Bundle \'%s\' does not exist.', $bundleName));
     }
 }

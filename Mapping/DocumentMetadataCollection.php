@@ -5,10 +5,10 @@ namespace Sineflow\ElasticsearchBundle\Mapping;
 /**
  * Holds gathered metadata from all document entities.
  */
-class ClassMetadataCollection
+class DocumentMetadataCollection
 {
     /**
-     * @var ClassMetadata[]
+     * @var DocumentMetadata[]
      */
     private $metadata;
 
@@ -18,7 +18,7 @@ class ClassMetadataCollection
     private $typesMap = [];
 
     /**
-     * @param ClassMetadata[] $metadata
+     * @param DocumentMetadata[] $metadata
      */
     public function __construct(array $metadata)
     {
@@ -54,7 +54,7 @@ class ClassMetadataCollection
      *
      * @param array $repositories
      *
-     * @return ClassMetadata[]
+     * @return DocumentMetadata[]
      */
     public function getMetadata($repositories = [])
     {

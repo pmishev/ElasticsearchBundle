@@ -3,6 +3,7 @@
 namespace Sineflow\ElasticsearchBundle;
 
 use Sineflow\ElasticsearchBundle\DependencyInjection\Compiler\MappingPass;
+use Sineflow\ElasticsearchBundle\DependencyInjection\Compiler\RegisterProvidersPass;
 use Symfony\Component\ClassLoader\MapClassLoader;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
@@ -20,6 +21,7 @@ class SineflowElasticsearchBundle extends Bundle
         parent::build($container);
 
         $container->addCompilerPass(new MappingPass());
+        $container->addCompilerPass(new RegisterProvidersPass());
     }
 
     /**

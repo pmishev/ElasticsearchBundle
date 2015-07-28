@@ -1,6 +1,6 @@
 <?php
 
-namespace Sineflow\ElasticsearchBundle\Client;
+namespace Sineflow\ElasticsearchBundle\Manager;
 
 use Elasticsearch\Client;
 use Elasticsearch\Common\Exceptions\Forbidden403Exception;
@@ -9,7 +9,7 @@ use Sineflow\ElasticsearchBundle\Mapping\MappingTool;
 /**
  * This class interacts with elasticsearch using injected client.
  */
-class Connection
+class ConnectionManager
 {
     /**
      * @var Client

@@ -1,17 +1,19 @@
 <?php
 
-namespace Sineflow\ElasticsearchBundle\ORM;
+namespace Sineflow\ElasticsearchBundle\Manager;
 
-use Sineflow\ElasticsearchBundle\Client\Connection;
 use Sineflow\ElasticsearchBundle\Document\DocumentInterface;
-use ONGR\ElasticsearchBundle\Event\ElasticsearchCommitEvent;
-use ONGR\ElasticsearchBundle\Event\ElasticsearchPersistEvent;
-use ONGR\ElasticsearchBundle\Event\Events;
-use Sineflow\ElasticsearchBundle\Mapping\ClassMetadata;
-use Sineflow\ElasticsearchBundle\Mapping\ClassMetadataCollection;
-use ONGR\ElasticsearchBundle\Result\Converter;
+use Sineflow\ElasticsearchBundle\Document\Provider\ProviderInterface;
+use Sineflow\ElasticsearchBundle\Document\Provider\ProviderRegistry;
+use Sineflow\ElasticsearchBundle\Document\Repository\Repository;
+use Sineflow\ElasticsearchBundle\Event\ElasticsearchCommitEvent;
+use Sineflow\ElasticsearchBundle\Event\ElasticsearchPersistEvent;
+use Sineflow\ElasticsearchBundle\Event\Events;
+use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
+use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection;
 use Symfony\Component\EventDispatcher\Event;
 use Symfony\Component\EventDispatcher\EventDispatcher;
+use ONGR\ElasticsearchBundle\Result\Converter;
 
 /**
  * Manager class.
@@ -19,14 +21,19 @@ use Symfony\Component\EventDispatcher\EventDispatcher;
 class IndexManager
 {
     /**
-     * @var Connection Elasticsearch connection.
+     * @var ConnectionManager Elasticsearch connection.
      */
     private $connection;
 
     /**
-     * @var ClassMetadataCollection
+     * @var DocumentMetadataCollection
      */
     private $metadataCollection;
+
+    /**
+     * @var ProviderRegistry
+     */
+    private $providerRegistry;
 
     /**
      * @var array
@@ -59,14 +66,20 @@ class IndexManager
     private $writeAlias = null;
 
     /**
-     * @param Connection              $connection
-     * @param ClassMetadataCollection $metadataCollection
-     * @param array                   $indexSettings
+     * @param ConnectionManager          $connection
+     * @param DocumentMetadataCollection $metadataCollection
+     * @param ProviderRegistry           $providerRegistry
+     * @param array                      $indexSettings
      */
-    public function __construct(Connection $connection, ClassMetadataCollection $metadataCollection, array $indexSettings)
+    public function __construct(
+        ConnectionManager $connection,
+        DocumentMetadataCollection $metadataCollection,
+        ProviderRegistry $providerRegistry,
+        array $indexSettings)
     {
         $this->connection = $connection;
         $this->metadataCollection = $metadataCollection;
+        $this->providerRegistry = $providerRegistry;
         $this->indexSettings = $indexSettings;
 
         if (true === $this->getUseAliases()) {
@@ -118,7 +131,7 @@ class IndexManager
     /**
      * Returns Elasticsearch connection.
      *
-     * @return Connection
+     * @return ConnectionManager
      */
     public function getConnection()
     {
@@ -135,6 +148,9 @@ class IndexManager
 
     /**
      * Returns repository with one or several active selected types.
+     *
+     * TODO: instead of creating a new repository object every time, the repository class should be defined in the entity annotation
+     * TODO: Make sure the returned repository implements RepositoryInterface
      *
      * @param string|string[] $type
      *
@@ -161,6 +177,17 @@ class IndexManager
     private function createRepository(array $types)
     {
         return new Repository($this, $types);
+    }
+
+    /**
+     * Returns the data provider object for a type
+     *
+     * @param string $type The type document class
+     * @return ProviderInterface
+     */
+    public function getDataProvider($type)
+    {
+        return $this->providerRegistry->getProviderInstance($type);
     }
 
     /**
@@ -294,11 +321,11 @@ class IndexManager
             throw new \Exception('Index rebuilding is not supported, unless you use aliases');
         }
 
-        $oldIndex = $this->getLiveIndex();
-
         // Create a new index
         $settings = $this->indexSettings;
-        $settings['index'] = $this->getBaseIndexName() . '_' . date('YmdHis');
+        $oldIndex = $this->getLiveIndex();
+        $newIndex = $this->getBaseIndexName() . '_' . date('YmdHis');
+        $settings['index'] = $newIndex;
         $this->getConnection()->getClient()->indices()->create($settings);
         // Point write alias to the new index as well
         $setAliasParams = [
@@ -306,7 +333,7 @@ class IndexManager
                 'actions' => [
                     [
                         'add' => [
-                            'index' => $settings['index'],
+                            'index' => $newIndex,
                             'alias' => $this->writeAlias
                         ],
                     ]
@@ -315,8 +342,55 @@ class IndexManager
         ];
         $this->getConnection()->getClient()->indices()->updateAliases($setAliasParams);
 
-        // Override the write alias with the new physical index name, so rebuilding only happens in the new index
+        // Temporarily override the write alias with the new physical index name, so rebuilding only happens in the new index
+        $originalWriteAlias = $this->writeAlias;
         $this->setWriteAlias($settings['index']);
+
+        foreach ($this->metadataCollection->getTypes() as $type) {
+            $typeDataProvider = $this->getDataProvider($type);
+            foreach ($typeDataProvider->getDocuments() as $i => $document) {
+                $this->persist($document);
+                // Send the bulk request every 1000 documents, so it doesn't get too big
+                if ($i > 0 && $i % 1000 == 0) {
+                    $this->commit();
+                }
+            }
+        }
+        // Save any remaining documents to ES
+        $this->commit();
+
+        // Restore write alias name
+        $this->setWriteAlias($originalWriteAlias);
+
+        // Point both aliases to the new index and remove them from the old
+        $setAliasParams = [
+            'body' => [
+                'actions' => [
+                    [
+                        'add' => [
+                            'index' => $newIndex,
+                            'alias' => $this->readAlias
+                        ],
+                    ],
+                    [
+                        'remove' => [
+                            'index' => $oldIndex,
+                            'alias' => $this->readAlias
+                        ],
+                    ],
+                    [
+                        'remove' => [
+                            'index' => $oldIndex,
+                            'alias' => $this->writeAlias
+                        ],
+                    ]
+                ],
+            ],
+        ];
+        $this->getConnection()->getClient()->indices()->updateAliases($setAliasParams);
+
+        // Delete the old index
+        $this->getConnection()->getClient()->indices()->delete(['index' => $oldIndex]);
 
         dump($this->metadataCollection->getTypes());die;
 
@@ -373,12 +447,13 @@ class IndexManager
 //     *
 //     * @param object $document
 //     *
-//     * @return ClassMetadata|null
+//     * @return DocumentMetadata|null
 //     */
 //    public function getDocumentMapping($document)
 //    {
 //        foreach ($this->getBundlesMapping() as $repository) {
-//            if (in_array(get_class($document), [$repository->getNamespace(), $repository->getProxyNamespace()])) {
+////            if (in_array(get_class($document), [$repository->getNamespace(), $repository->getProxyNamespace()])) {
+//            if (in_array(get_class($document), [$repository->resolveClassName(), $repository->getProxyNamespace()])) {
 //                return $repository;
 //            }
 //        }
@@ -386,17 +461,17 @@ class IndexManager
 //        return null;
 //    }
 
-//    /**
-//     * Returns bundles mapping.
-//     *
-//     * @param array $repositories
-//     *
-//     * @return ClassMetadata[]
-//     */
-//    public function getBundlesMapping($repositories = [])
-//    {
-//        return $this->metadataCollection->getMetadata($repositories);
-//    }
+    /**
+     * Returns bundles mapping.
+     *
+     * @param array $repositories
+     *
+     * @return DocumentMetadata[]
+     */
+    public function getBundlesMapping($repositories = [])
+    {
+        return $this->metadataCollection->getMetadata($repositories);
+    }
 //
 //    /**
 //     * @return array
@@ -405,33 +480,33 @@ class IndexManager
 //    {
 //        return $this->metadataCollection->getTypesMap();
 //    }
-//
-//    /**
-//     * Checks if specified repository and type is defined, throws exception otherwise.
-//     *
-//     * @param string $type
-//     *
-//     * @throws \InvalidArgumentException
-//     */
-//    private function checkRepositoryType(&$type)
-//    {
-//        $mapping = $this->getBundlesMapping();
-//
-//        if (array_key_exists($type, $mapping)) {
-//            return;
-//        }
-//
-//        if (array_key_exists($type . 'Document', $mapping)) {
-//            $type .= 'Document';
-//
-//            return;
-//        }
-//
-//        $exceptionMessage = "Undefined repository `{$type}`, valid repositories are: `" .
-//            join('`, `', array_keys($this->getBundlesMapping())) . '`.';
-//        throw new \InvalidArgumentException($exceptionMessage);
-//    }
-//
+
+    /**
+     * Checks if specified repository and type is defined, throws exception otherwise.
+     *
+     * @param string $type
+     *
+     * @throws \InvalidArgumentException
+     */
+    private function checkRepositoryType(&$type)
+    {
+        $mapping = $this->getBundlesMapping();
+
+        if (array_key_exists($type, $mapping)) {
+            return;
+        }
+
+        if (array_key_exists($type . 'Document', $mapping)) {
+            $type .= 'Document';
+
+            return;
+        }
+
+        $exceptionMessage = "Undefined repository `{$type}`, valid repositories are: `" .
+            join('`, `', array_keys($this->getBundlesMapping())) . '`.';
+        throw new \InvalidArgumentException($exceptionMessage);
+    }
+
 //    /**
 //     * Returns converter instance.
 //     *

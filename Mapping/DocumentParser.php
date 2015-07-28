@@ -68,7 +68,7 @@ class DocumentParser
      *
      * @param \ReflectionClass $reflectionClass
      *
-     * @return array|null
+     * @return array
      */
     public function parse(\ReflectionClass $reflectionClass)
     {
@@ -80,7 +80,7 @@ class DocumentParser
         if ($class !== null && $class->create) {
             if ($class->parent !== null) {
                 $parent = $this->getDocumentParentType(
-                    new \ReflectionClass($this->finder->getNamespace($class->parent))
+                    new \ReflectionClass($this->finder->resolveClassName($class->parent))
                 );
             } else {
                 $parent = null;
@@ -117,7 +117,7 @@ class DocumentParser
             ];
         }
 
-        return null;
+        return [];
     }
 
     /**
@@ -171,7 +171,7 @@ class DocumentParser
 //                    'type' => $type->type,
 //                ];
 //                if ($type->objectName) {
-//                    $child = new \ReflectionClass($this->finder->getNamespace($type->objectName));
+//                    $child = new \ReflectionClass($this->finder->resolveClassName($type->objectName));
 //                    $alias[$type->name] = array_merge(
 //                        $alias[$type->name],
 //                        [
@@ -364,7 +364,7 @@ class DocumentParser
      */
     private function getObjectMapping($objectName)
     {
-        $namespace = $this->finder->getNamespace($objectName);
+        $namespace = $this->finder->resolveClassName($objectName);
 
         if (array_key_exists($namespace, $this->objects)) {
             return $this->objects[$namespace];

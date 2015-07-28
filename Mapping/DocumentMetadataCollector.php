@@ -5,7 +5,7 @@ namespace Sineflow\ElasticsearchBundle\Mapping;
 use Sineflow\ElasticsearchBundle\Document\DocumentInterface;
 
 /**
- * DocumentParser wrapper for getting bundle documents' mapping.
+ * DocumentParser wrapper for getting type/document mapping.
  */
 class DocumentMetadataCollector
 {
@@ -20,9 +20,9 @@ class DocumentMetadataCollector
     private $parser;
 
     /**
-     * @var array Contains mappings gathered from bundle documents.
+     * @var array Contains client mappings gathered from document definitions.
      */
-    private $documents = [];
+    private $mappings = [];
 
     /**
      * @param DocumentFinder $finder For finding documents.
@@ -35,109 +35,66 @@ class DocumentMetadataCollector
     }
 
     /**
-     * Retrieves mapping from local cache otherwise runs through bundle files.
+     * Retrieves type mapping for the Elasticsearch client
      *
-     * @param string $namespace Bundle name to retrieve mappings from.
-     * @param bool   $force     Forces to rescan bundles and skip local cache.
+     * @param string $documentClassName Bundle name to retrieve mappings from.
+     * @param bool   $useCache          Whether to use cached mapping or rescan document annotations.
      *
      * @return array
      */
-    public function getClientMapping($namespace, $force = false)
+    public function getClientMapping($documentClassName, $useCache = true)
     {
-        if (!$force && array_key_exists($namespace, $this->documents)) {
-            return $this->documents[$namespace];
+        if ($useCache && isset($this->mappings[$documentClassName])) {
+            return $this->mappings[$documentClassName];
         }
 
         $mappings = [];
-        foreach ($this->getMapping($namespace) as $type => $mapping) {
-            if (!empty($mapping['properties'])) {
+        foreach ($this->getMetadataFromClass($documentClassName) as $type => $metadata) {
+            if (!empty($metadata['properties'])) {
                 $mappings[$type] = array_filter(
                     array_merge(
-                        ['properties' => $mapping['properties']],
-                        $mapping['fields']
+                        ['properties' => $metadata['properties']],
+                        $metadata['fields']
                     ),
                     function ($value) {
+                        // Remove all empty non-boolean values from the mapping array
                         return (bool) $value || is_bool($value);
                     }
                 );
             }
         }
 
-        $this->documents[$namespace] = $mappings;
+        $this->mappings[$documentClassName] = $mappings;
 
-        return $this->documents[$namespace];
+        return $this->mappings[$documentClassName];
     }
 
     /**
-     * Retrieves document mapping by namespace.
-     *
-     * @param string $namespace Document namespace.
-     *
-     * @return array|null
-     */
-    public function getMappingByNamespace($namespace)
-    {
-        return $this->getDocumentReflectionMapping(new \ReflectionClass($this->finder->getNamespace($namespace)));
-    }
-
-    /**
-     * Retrieves mapping from document.
+     * Returns document mapping with metadata from a document object
      *
      * @param DocumentInterface $document
      *
-     * @return array|null
+     * @return array
      */
-    public function getDocumentMapping(DocumentInterface $document)
+    public function getMetadataFromObject(DocumentInterface $document)
     {
-        return $this->getDocumentReflectionMapping(new \ReflectionObject($document));
+        return $this->getDocumentReflectionMetadata(new \ReflectionObject($document));
     }
 
     /**
-     * Returns mapping with metadata.
+     * Returns document mapping with metadata
      *
-     * @param string $namespace Bundle or document namespace.
+     * @param string $documentClassName
      *
      * @return array
      */
-    public function getMapping($namespace)
+    public function getMetadataFromClass($documentClassName)
     {
-        if (strpos($namespace, ':') === false) {
-            return $this->getBundleMapping($namespace);
-        }
-        $mapping = $this->getMappingByNamespace($namespace);
+        $metadata = $this->getDocumentReflectionMetadata(
+            new \ReflectionClass($this->finder->resolveClassName($documentClassName))
+        );
 
-        return $mapping === null ? [] : $mapping;
-    }
-
-    /**
-     * Searches for documents in bundle and tries to read them.
-     *
-     * @param string $bundle
-     *
-     * @return array Empty array on containing zero documents.
-     */
-    public function getBundleMapping($bundle)
-    {
-        $mappings = [];
-        $bundleNamespace = $this->finder->getBundleClass($bundle);
-        $bundleNamespace = substr($bundleNamespace, 0, strrpos($bundleNamespace, '\\'));
-        $documentDir = str_replace('/', '\\', $this->finder->getDocumentDir());
-
-        // Loop through documents found in bundle.
-        foreach ($this->finder->getBundleDocumentPaths($bundle) as $document) {
-            $documentReflection = new \ReflectionClass(
-                $bundleNamespace .
-                '\\' . $documentDir .
-                '\\' . pathinfo($document, PATHINFO_FILENAME)
-            );
-
-            $documentMapping = $this->getDocumentReflectionMapping($documentReflection);
-            if ($documentMapping !== null) {
-                $mappings = array_replace_recursive($mappings, $documentMapping);
-            }
-        }
-
-        return $mappings;
+        return $metadata;
     }
 
     /**
@@ -145,12 +102,12 @@ class DocumentMetadataCollector
      *
      * @param \ReflectionClass $reflectionClass Document reflection class to read mapping from.
      *
-     * @return array|null
+     * @return array
      */
-    private function getDocumentReflectionMapping(\ReflectionClass $reflectionClass)
+    private function getDocumentReflectionMetadata(\ReflectionClass $reflectionClass)
     {
-        $mapping = $this->parser->parse($reflectionClass);
+        $metadata = $this->parser->parse($reflectionClass);
 
-        return $mapping;
+        return $metadata;
     }
 }
