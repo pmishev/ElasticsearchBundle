@@ -2,6 +2,7 @@
 
 namespace Sineflow\ElasticsearchBundle\DependencyInjection;
 
+use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\Config\Resource\DirectoryResource;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -44,6 +45,9 @@ class SineflowElasticsearchExtension extends Extension
         // TODO: uncomment when needed
         $this->addDocumentFinderDefinition($config, $container);
         $this->addMetadataCollectorDefinition($config, $container);
+        $this->addMetadataCollectionDefinition($config, $container);
+        $this->addConnectionDefinitions($config, $container);
+
 //        $this->addDocumentsResource($config, $container);
 //        $this->addDataCollectorDefinition($config, $container);
 //
@@ -124,6 +128,119 @@ class SineflowElasticsearchExtension extends Extension
         );
         $container->setDefinition('sfes.document_metadata_collector', $metadataCollector);
     }
+
+    private function addMetadataCollectionDefinition(array $config, ContainerBuilder $container)
+    {
+        $documentsMetadataDefinitions = [];
+        $indices = $config['indices'];
+
+        foreach ($indices as $indexManagerName => $indexSettings) {
+            // Skip abstract index definitions, as they are only used as templates for real ones
+            if (isset($indexSettings['abstract']) && true === $indexSettings['abstract']) {
+                continue;
+            }
+
+            $documentsMetadataDefinitions[$indexManagerName] = $this->getDocumentsMetadataDefinitions($container, $indexSettings);
+
+            $documentsMetadataCollection = new Definition(
+                'Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection',
+                [
+                    $documentsMetadataDefinitions,
+                ]
+            );
+            $container->setDefinition('sfes.document_metadata_collection', $documentsMetadataCollection);
+        }
+    }
+
+    /**
+     * Fetches metadata service definitions for the types within an index
+     *
+     * @param ContainerBuilder $container
+     * @param array            $indexSettings
+     *
+     * @return array
+     */
+    private function getDocumentsMetadataDefinitions(ContainerBuilder $container, $indexSettings)
+    {
+        $result = [];
+
+        /** @var DocumentMetadataCollector $metaCollector */
+        $metaCollector = $container->get('sfes.document_metadata_collector');
+        foreach ($indexSettings['types'] as $typeClass) {
+            foreach ($metaCollector->getMetadataFromClass($typeClass) as $typeName => $metadata) {
+                $metadataDefinition = new Definition('Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata');
+                $metadataDefinition->addArgument([$typeName => $metadata]);
+                $result[$typeClass] = $metadataDefinition;
+            }
+        }
+
+        return $result;
+
+    }
+
+    private function addConnectionDefinitions(array $config, ContainerBuilder $container)
+    {
+        // Go through each defined connection and register a manager service for each
+        foreach ($config['connections'] as $connectionName => $connectionSettings) {
+            $connectionName = strtolower($connectionName);
+
+            $client = new Definition(
+                'Elasticsearch\Client',
+                [
+                    $this->getClientParams($connectionSettings, $container),
+                ]
+            );
+            $connectionDefinition = new Definition(
+                'Sineflow\ElasticsearchBundle\Manager\ConnectionManager',
+                [
+                    $client,
+                    $connectionSettings,
+                ]
+            );
+
+            $container->setDefinition(
+                sprintf('sfes.connection.%s', $connectionName),
+                $connectionDefinition
+            );
+
+            if ($connectionName === 'default') {
+                $container->setAlias('sfes.connection', 'sfes.connection.default');
+            }
+        }
+    }
+
+    /**
+     * Returns params for ES client.
+     *
+     * @param array            $connectionSettings
+     * @param ContainerBuilder $container
+     *
+     * @return array
+     */
+    private function getClientParams(array $connectionSettings, ContainerBuilder $container)
+    {
+        $params = ['hosts' => $connectionSettings['hosts']];
+
+        // TODO: handle this better, maybe with OptionsResolver
+        if (!empty($connectionSettings['params']['auth'])) {
+            $params['connectionParams']['auth'] = array_values($connectionSettings['params']['auth']);
+        }
+
+        if ($connectionSettings['logging'] === true) {
+            $params['logging'] = true;
+            $params['logPath'] = $connectionSettings['log_path'];
+            $params['logLevel'] = $connectionSettings['log_level'];
+            $params['tracePath'] = $connectionSettings['trace_path'];
+            $params['traceLevel'] = $connectionSettings['trace_level'];
+            // TODO: add support for custom logger objects
+//            $params['logObject'] = new Reference('es.logger.trace');
+//            $params['traceObject'] = new Reference('es.logger.trace');
+        }
+
+        return $params;
+    }
+
+
 //
 //    /**
 //     * Adds document directory file resource.

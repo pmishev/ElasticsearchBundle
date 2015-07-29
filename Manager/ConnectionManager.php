@@ -121,6 +121,10 @@ class ConnectionManager
      */
     public function commit($forceRefresh = true)
     {
+        if (empty($this->bulkQueries)) {
+            return;
+        }
+
         $this->bulkQueries = array_merge($this->bulkQueries, $this->bulkParams);
         $this->getClient()->bulk($this->bulkQueries);
         if ($forceRefresh) {

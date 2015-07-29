@@ -21,6 +21,11 @@ use ONGR\ElasticsearchBundle\Result\Converter;
 class IndexManager
 {
     /**
+     * @var string The unique manager name (the key from the index configuration)
+     */
+    private $managerName;
+
+    /**
      * @var ConnectionManager Elasticsearch connection.
      */
     private $connection;
@@ -66,17 +71,20 @@ class IndexManager
     private $writeAlias = null;
 
     /**
+     * @param string                     $managerName
      * @param ConnectionManager          $connection
      * @param DocumentMetadataCollection $metadataCollection
      * @param ProviderRegistry           $providerRegistry
      * @param array                      $indexSettings
      */
     public function __construct(
+        $managerName,
         ConnectionManager $connection,
         DocumentMetadataCollection $metadataCollection,
         ProviderRegistry $providerRegistry,
         array $indexSettings)
     {
+        $this->managerName = $managerName;
         $this->connection = $connection;
         $this->metadataCollection = $metadataCollection;
         $this->providerRegistry = $providerRegistry;
@@ -123,7 +131,7 @@ class IndexManager
     /**
      * @param string $writeAlias
      */
-    public function setWriteAlias($writeAlias)
+    private function setWriteAlias($writeAlias)
     {
         $this->writeAlias = $writeAlias;
     }
@@ -187,7 +195,9 @@ class IndexManager
      */
     public function getDataProvider($type)
     {
-        return $this->providerRegistry->getProviderInstance($type);
+        $provider = $this->providerRegistry->getProviderInstance($type);
+
+        return $provider;
     }
 
     /**
@@ -211,6 +221,22 @@ class IndexManager
     public function getBaseIndexName()
     {
         return $this->indexSettings['index'];
+    }
+
+    /**
+     * Return a name for a new index, which does not already exist
+     */
+    private function getUniqueIndexName()
+    {
+        $indexName = $baseName = $this->getBaseIndexName() . '_' . date('YmdHis');
+
+        $i = 1;
+        while ($this->getConnection()->getClient()->indices()->exists(array('index' => $indexName))) {
+            $indexName = $baseName . '_' . $i;
+            $i++;
+        }
+
+        return $indexName;
     }
 
     /**
@@ -239,7 +265,7 @@ class IndexManager
             }
 
             // Create physical index with a unique name
-            $settings['index'] = $this->getBaseIndexName() . '_' . date('YmdHis');
+            $settings['index'] = $this->getUniqueIndexName();
             $this->getConnection()->getClient()->indices()->create($settings);
 
             // Set aliases to index
@@ -324,7 +350,7 @@ class IndexManager
         // Create a new index
         $settings = $this->indexSettings;
         $oldIndex = $this->getLiveIndex();
-        $newIndex = $this->getBaseIndexName() . '_' . date('YmdHis');
+        $newIndex = $this->getUniqueIndexName();
         $settings['index'] = $newIndex;
         $this->getConnection()->getClient()->indices()->create($settings);
         // Point write alias to the new index as well
@@ -346,14 +372,16 @@ class IndexManager
         $originalWriteAlias = $this->writeAlias;
         $this->setWriteAlias($settings['index']);
 
-        foreach ($this->metadataCollection->getTypes() as $type) {
-            $typeDataProvider = $this->getDataProvider($type);
-            foreach ($typeDataProvider->getDocuments() as $i => $document) {
+        foreach ($this->metadataCollection->getDocumentClassesForIndex($this->managerName) as $documentClass) {
+            $typeDataProvider = $this->getDataProvider($documentClass);
+            $i = 1;
+            foreach ($typeDataProvider->getDocuments() as $document) {
                 $this->persist($document);
                 // Send the bulk request every 1000 documents, so it doesn't get too big
-                if ($i > 0 && $i % 1000 == 0) {
+                if ($i % 1000 == 0) {
                     $this->commit();
                 }
+                $i++;
             }
         }
         // Save any remaining documents to ES
@@ -391,9 +419,6 @@ class IndexManager
 
         // Delete the old index
         $this->getConnection()->getClient()->indices()->delete(['index' => $oldIndex]);
-
-        dump($this->metadataCollection->getTypes());die;
-
     }
 
     /**
@@ -465,6 +490,8 @@ class IndexManager
      * Returns bundles mapping.
      *
      * @param array $repositories
+     *
+     * TODO: rename to getTypesMapping and return only the type mappings for this index
      *
      * @return DocumentMetadata[]
      */

@@ -19,36 +19,7 @@ class MappingPass implements CompilerPassInterface
      */
     public function process(ContainerBuilder $container)
     {
-        $connections = $container->getParameter('sfes.connections');
         $indices = $container->getParameter('sfes.indices');
-
-        // Go through each defined connection and register a manager service for each
-        foreach ($connections as $connectionName => $connectionSettings) {
-            $connectionName = strtolower($connectionName);
-
-            $client = new Definition(
-                'Elasticsearch\Client',
-                [
-                    $this->getClientParams($connectionSettings, $container),
-                ]
-            );
-            $connectionDefinition = new Definition(
-                'Sineflow\ElasticsearchBundle\Manager\ConnectionManager',
-                [
-                    $client,
-                    $connectionSettings,
-                ]
-            );
-
-            $container->setDefinition(
-                sprintf('sfes.connection.%s', $connectionName),
-                $connectionDefinition
-            );
-
-            if ($connectionName === 'default') {
-                $container->setAlias('sfes.connection', 'sfes.connection.default');
-            }
-        }
 
         // Go through each defined index and register a manager service for each
         foreach ($indices as $indexManagerName => $indexSettings) {
@@ -56,15 +27,6 @@ class MappingPass implements CompilerPassInterface
             if (isset($indexSettings['abstract']) && true === $indexSettings['abstract']) {
                 continue;
             }
-
-            $typesMetadata = $this->getTypesMetadata($container, $indexSettings);
-
-            $typesMetadataCollection = new Definition(
-                'Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection',
-                [
-                    $typesMetadata,
-                ]
-            );
 
             // Make sure the connection service definition exists
             $connectionService = sprintf('sfes.connection.%s', $indexSettings['connection']);
@@ -77,8 +39,9 @@ class MappingPass implements CompilerPassInterface
             $indexManagerDefinition = new Definition(
                 'Sineflow\ElasticsearchBundle\Manager\IndexManager',
                 [
+                    $indexManagerName,
                     $container->getDefinition($connectionService),
-                    $typesMetadataCollection,
+                    $container->getDefinition('sfes.document_metadata_collection'),
                     $container->getDefinition('sfes.provider_registry'),
                     $this->getIndexParams($indexSettings, $container),
                 ]
@@ -93,63 +56,6 @@ class MappingPass implements CompilerPassInterface
                 $indexManagerDefinition
             );
         }
-    }
-
-    /**
-     * Fetches metadata for the types within an index
-     *
-     * @param ContainerBuilder $container
-     * @param array            $indexSettings
-     *
-     * @return array
-     */
-    private function getTypesMetadata(ContainerBuilder $container, $indexSettings)
-    {
-        $result = [];
-
-        /** @var DocumentMetadataCollector $metaCollector */
-        $metaCollector = $container->get('sfes.document_metadata_collector');
-        foreach ($indexSettings['types'] as $typeClass) {
-            foreach ($metaCollector->getMetadataFromClass($typeClass) as $typeName => $metadata) {
-                $metadataDefinition = new Definition('Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata');
-                $metadataDefinition->addArgument([$typeName => $metadata]);
-                $result[$typeClass] = $metadataDefinition;
-            }
-        }
-
-        return $result;
-
-    }
-
-    /**
-     * Returns params for ES client.
-     *
-     * @param array            $connectionSettings
-     * @param ContainerBuilder $container
-     *
-     * @return array
-     */
-    private function getClientParams(array $connectionSettings, ContainerBuilder $container)
-    {
-        $params = ['hosts' => $connectionSettings['hosts']];
-
-        // TODO: handle this better, maybe with OptionsResolver
-        if (!empty($connectionSettings['params']['auth'])) {
-            $params['connectionParams']['auth'] = array_values($connectionSettings['params']['auth']);
-        }
-
-        if ($connectionSettings['logging'] === true) {
-            $params['logging'] = true;
-            $params['logPath'] = $connectionSettings['log_path'];
-            $params['logLevel'] = $connectionSettings['log_level'];
-            $params['tracePath'] = $connectionSettings['trace_path'];
-            $params['traceLevel'] = $connectionSettings['trace_level'];
-            // TODO: add support for custom logger objects
-//            $params['logObject'] = new Reference('es.logger.trace');
-//            $params['traceObject'] = new Reference('es.logger.trace');
-        }
-
-        return $params;
     }
 
     /**

@@ -40,6 +40,8 @@ class DocumentMetadataCollector
      * @param string $documentClassName Bundle name to retrieve mappings from.
      * @param bool   $useCache          Whether to use cached mapping or rescan document annotations.
      *
+     * TODO: This method should be moved to the DocumentMetadata class
+     *
      * @return array
      */
     public function getClientMapping($documentClassName, $useCache = true)

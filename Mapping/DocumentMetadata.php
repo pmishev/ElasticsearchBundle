@@ -34,6 +34,17 @@ class DocumentMetadata
     }
 
     /**
+     * Configures options resolver.
+     *
+     * @param OptionsResolver $optionsResolver
+     */
+    protected function configureOptions(OptionsResolver $optionsResolver)
+    {
+//        $optionsResolver->setRequired(['properties', 'fields', 'aliases', 'namespace', 'proxyNamespace', 'class', 'objects']);
+        $optionsResolver->setRequired(['properties', 'fields', 'objects']);
+    }
+
+    /**
      * @return array
      */
     public function getProperties()
@@ -95,16 +106,5 @@ class DocumentMetadata
     public function getType()
     {
         return $this->type;
-    }
-
-    /**
-     * Configures options resolver.
-     *
-     * @param OptionsResolver $optionsResolver
-     */
-    protected function configureOptions(OptionsResolver $optionsResolver)
-    {
-//        $optionsResolver->setRequired(['properties', 'fields', 'aliases', 'namespace', 'proxyNamespace', 'class', 'objects']);
-        $optionsResolver->setRequired(['properties', 'fields', 'objects']);
     }
 }

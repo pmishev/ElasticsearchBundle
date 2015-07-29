@@ -64,6 +64,21 @@ class DocumentFinder
     }
 
     /**
+     * Return the short name for a fully qualified document class name (e.g. AppBundle:Product)
+     *
+     * @param string $className
+     * @return string
+     */
+    public function getShortClassName($className)
+    {
+        if (strpos($className, ':') === false) {
+            $className = str_replace('\\\\', ':', str_replace(str_replace('/', '\\', $this->getDocumentDir()), '', $className));
+        }
+
+        return $className;
+    }
+
+    /**
      * Returns bundle document paths.
      *
      * TODO: remove this method, as we don't need to get all documents defined in a bundle - they must be explicitly defined for each index manager
