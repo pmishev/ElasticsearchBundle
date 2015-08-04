@@ -4,6 +4,7 @@ namespace Sineflow\ElasticsearchBundle\DependencyInjection\Compiler;
 
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
+use Symfony\Component\DependencyInjection\Definition;
 
 /**
  * Registers data providers for type entities
@@ -28,10 +29,14 @@ class RegisterProvidersPass implements CompilerPassInterface
         }
 
         $registry = $container->getDefinition('sfes.provider_registry');
+        $metadataCollection = $container->get('sfes.document_metadata_collection');
         $providers = $container->findTaggedServiceIds('sfes.provider');
 
+        // Get all types and their corresponding indices
+        $typeIndices = $metadataCollection->getDocumentClassesIndices();
+
         foreach ($providers as $providerId => $tags) {
-            $type = null;
+            $documentClass = null;
             $class = $container->getDefinition($providerId)->getClass();
 
             if (!$class || !$this->isProviderImplementation($class)) {
@@ -43,10 +48,31 @@ class RegisterProvidersPass implements CompilerPassInterface
                     throw new \InvalidArgumentException(sprintf('Elasticsearch provider "%s" must specify the "type" attribute.', $providerId));
                 }
 
-                $type = $tag['type'];
+                $documentClass = $tag['type'];
+
+                unset($typeIndices[$documentClass]);
             }
 
-            $registry->addMethodCall('addProvider', array($type, $providerId));
+            $registry->addMethodCall('addProvider', array($documentClass, $providerId));
+        }
+
+        // Set Elasticsearch self-provider by default for all types that do not have a provider registered
+        foreach ($typeIndices as $documentClass => $index) {
+            $providerDefinition = new Definition(
+                'Sineflow\ElasticsearchBundle\Document\Provider\ElasticsearchProvider',
+                [
+                    $documentClass,
+                    $container->getDefinition('sfes.document_metadata_collection'),
+                    $container->getDefinition(sprintf('sfes.index.%s', $index)),
+                    $documentClass
+                ]
+            );
+            $definitionId = sprintf('sfes.provider.%s.%s', strtolower($index), strtolower($metadataCollection->getDocumentMetadata($documentClass)->getType()));
+            $container->setDefinition(
+                $definitionId,
+                $providerDefinition
+            );
+            $registry->addMethodCall('addProvider', array($documentClass, $definitionId));
         }
     }
 

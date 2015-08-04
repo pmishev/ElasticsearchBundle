@@ -42,10 +42,11 @@ class DocumentParser
      */
     private $objects = [];
 
-//    /**
-//     * @var array Document properties aliases.
-//     */
-//    private $aliases = [];
+    /**
+     * @var array Document properties aliases.
+     * TODO: can we do without these?
+     */
+    private $aliases = [];
 
     /**
      * @var array Local cache for document properties.
@@ -107,7 +108,7 @@ class DocumentParser
                         $class->dump(),
                         ['_parent' => $parent === null ? null : ['type' => $parent]]
                     ),
-//                    'aliases' => $this->getAliases($reflectionClass),
+                    'aliases' => $this->getAliases($reflectionClass),
                     'objects' => $this->getObjects(),
 //                    'proxyNamespace' => ProxyFactory::getProxyNamespace($reflectionClass, true),
                 // TODO: what do I need these for?
@@ -147,48 +148,48 @@ class DocumentParser
         return array_keys($this->objects);
     }
 
-//    /**
-//     * Finds aliases for every property used in document including parent classes.
-//     *
-//     * @param \ReflectionClass $reflectionClass
-//     *
-//     * @return array
-//     */
-//    private function getAliases(\ReflectionClass $reflectionClass)
-//    {
-//        $reflectionName = $reflectionClass->getName();
-//        if (array_key_exists($reflectionName, $this->aliases)) {
-//            return $this->aliases[$reflectionName];
-//        }
-//
-//        $alias = [];
-//        /** @var \ReflectionProperty $property */
-//        foreach ($this->getDocumentPropertiesReflection($reflectionClass) as $name => $property) {
-//            $type = $this->getPropertyAnnotationData($property);
-//            if ($type !== null) {
-//                $alias[$type->name] = [
-//                    'propertyName' => $name,
-//                    'type' => $type->type,
-//                ];
-//                if ($type->objectName) {
-//                    $child = new \ReflectionClass($this->finder->resolveClassName($type->objectName));
-//                    $alias[$type->name] = array_merge(
-//                        $alias[$type->name],
-//                        [
-//                            'multiple' => $type instanceof Property ? $type->multiple : false,
-//                            'aliases' => $this->getAliases($child),
+    /**
+     * Finds aliases for every property used in document including parent classes.
+     *
+     * @param \ReflectionClass $reflectionClass
+     *
+     * @return array
+     */
+    private function getAliases(\ReflectionClass $reflectionClass)
+    {
+        $reflectionName = $reflectionClass->getName();
+        if (array_key_exists($reflectionName, $this->aliases)) {
+            return $this->aliases[$reflectionName];
+        }
+
+        $alias = [];
+        /** @var \ReflectionProperty $property */
+        foreach ($this->getDocumentPropertiesReflection($reflectionClass) as $name => $property) {
+            $type = $this->getPropertyAnnotationData($property);
+            if ($type !== null) {
+                $alias[$type->name] = [
+                    'propertyName' => $name,
+                    'type' => $type->type,
+                ];
+                if ($type->objectName) {
+                    $child = new \ReflectionClass($this->finder->resolveClassName($type->objectName));
+                    $alias[$type->name] = array_merge(
+                        $alias[$type->name],
+                        [
+                            'multiple' => $type instanceof Property ? $type->multiple : false,
+                            'aliases' => $this->getAliases($child),
 //                            'proxyNamespace' => ProxyFactory::getProxyNamespace($child, true),
 //                            'namespace' => $child->getName(),
-//                        ]
-//                    );
-//                }
-//            }
-//        }
-//
-//        $this->aliases[$reflectionName] = $alias;
-//
-//        return $this->aliases[$reflectionName];
-//    }
+                        ]
+                    );
+                }
+            }
+        }
+
+        $this->aliases[$reflectionName] = $alias;
+
+        return $this->aliases[$reflectionName];
+    }
 
     /**
      * Registers annotations to registry so that it could be used by reader.

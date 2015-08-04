@@ -61,6 +61,7 @@ class Repository implements RepositoryInterface
 
     /**
      * @return array
+     * TODO: fix
      */
     public function getTypes()
     {
@@ -83,6 +84,7 @@ class Repository implements RepositoryInterface
      * @return DocumentInterface|null
      *
      * @throws \LogicException
+     * TODO: fix
      */
     public function find($id, $resultType = self::RESULTS_OBJECT)
     {
@@ -158,6 +160,7 @@ class Repository implements RepositoryInterface
      * @param string     $resultType Result type returned.
      *
      * @return DocumentInterface|null The object.
+     * TODO: fix
      */
     public function findOneBy(array $criteria, array $orderBy = [], $resultType = self::RESULTS_OBJECT)
     {
@@ -317,6 +320,7 @@ class Repository implements RepositoryInterface
      * @param array $fields
      *
      * @return array
+     * TODO: fix
      */
     private function checkFields($searchArray, $fields = ['_parent', '_ttl'])
     {
@@ -362,6 +366,7 @@ class Repository implements RepositoryInterface
      * @return DocumentIterator|DocumentScanIterator|RawResultIterator|array
      *
      * @throws \Exception
+     * TODO: fix
      */
     private function parseResult($raw, $resultsType, $scrollDuration)
     {
@@ -441,6 +446,7 @@ class Repository implements RepositoryInterface
      * @return DocumentInterface
      *
      * @throws \LogicException
+     * TODO: fix
      */
     public function createDocument()
     {

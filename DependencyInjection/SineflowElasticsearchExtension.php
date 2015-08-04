@@ -131,6 +131,8 @@ class SineflowElasticsearchExtension extends Extension
 
     private function addMetadataCollectionDefinition(array $config, ContainerBuilder $container)
     {
+        // TODO: Add check to make sure that a document entity is not managed by more than one index!!!
+
         $documentsMetadataDefinitions = [];
         $indices = $config['indices'];
 
@@ -145,6 +147,7 @@ class SineflowElasticsearchExtension extends Extension
             $documentsMetadataCollection = new Definition(
                 'Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection',
                 [
+                    new Reference('sfes.document_finder'),
                     $documentsMetadataDefinitions,
                 ]
             );

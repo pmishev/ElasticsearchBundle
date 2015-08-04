@@ -16,16 +16,12 @@ abstract class AbstractProvider implements ProviderInterface
     private $documentMetadata;
 
     /**
-     * @var string The short class name of the document entity the provider is for
+     * @param string                     $documentClass The type the provider is for
+     * @param DocumentMetadataCollection $metadata      The metadata collection for all ES types
      */
-    protected $documentClass;
-
-    /**
-     * @param DocumentMetadataCollection $metadata
-     */
-    public function __construct(DocumentMetadataCollection $metadata)
+    public function __construct($documentClass, DocumentMetadataCollection $metadata)
     {
-        $this->documentMetadata = $metadata->getDocumentMetadata($this->documentClass);
+        $this->documentMetadata = $metadata->getDocumentMetadata($documentClass);
     }
 
     /**
@@ -38,16 +34,18 @@ abstract class AbstractProvider implements ProviderInterface
 
     /**
      * Returns a PHP Generator for iterating over the full dataset of source data that is to be inserted in ES
+     * The returned data can be either a document entity or an array ready for direct sending to ES
      *
-     * @return \Generator<DocumentInterface>
+     * @return \Generator<DocumentInterface|array>
      */
     abstract public function getDocuments();
 
     /**
-     * Build and return a document entity from the data source, ready for insertion into ES
+     * Build and return a document entity from the data source
+     * The returned data can be either a document entity or an array ready for direct sending to ES
      *
      * @param int|string $id
-     * @return DocumentInterface
+     * @return DocumentInterface|array
      */
     abstract public function getDocument($id);
 }

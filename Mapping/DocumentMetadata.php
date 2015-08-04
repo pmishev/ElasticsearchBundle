@@ -41,7 +41,7 @@ class DocumentMetadata
     protected function configureOptions(OptionsResolver $optionsResolver)
     {
 //        $optionsResolver->setRequired(['properties', 'fields', 'aliases', 'namespace', 'proxyNamespace', 'class', 'objects']);
-        $optionsResolver->setRequired(['properties', 'fields', 'objects']);
+        $optionsResolver->setRequired(['properties', 'fields', 'aliases', 'objects']);
     }
 
     /**
@@ -52,13 +52,13 @@ class DocumentMetadata
         return $this->metadata['properties'];
     }
 
-//    /**
-//     * @return array
-//     */
-//    public function getAliases()
-//    {
-//        return $this->metadata['aliases'];
-//    }
+    /**
+     * @return array
+     */
+    public function getAliases()
+    {
+        return $this->metadata['aliases'];
+    }
 
     /**
      * @return array

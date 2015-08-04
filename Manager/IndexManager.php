@@ -11,9 +11,9 @@ use Sineflow\ElasticsearchBundle\Event\ElasticsearchPersistEvent;
 use Sineflow\ElasticsearchBundle\Event\Events;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection;
+use Sineflow\ElasticsearchBundle\Result\Converter;
 use Symfony\Component\EventDispatcher\Event;
 use Symfony\Component\EventDispatcher\EventDispatcher;
-use ONGR\ElasticsearchBundle\Result\Converter;
 
 /**
  * Manager class.
@@ -372,11 +372,16 @@ class IndexManager
         $originalWriteAlias = $this->writeAlias;
         $this->setWriteAlias($settings['index']);
 
+        // Cycle all types for the index
         foreach ($this->metadataCollection->getDocumentClassesForIndex($this->managerName) as $documentClass) {
             $typeDataProvider = $this->getDataProvider($documentClass);
             $i = 1;
             foreach ($typeDataProvider->getDocuments() as $document) {
-                $this->persist($document);
+                if (is_array($document)) {
+                    $this->persistRaw($this->metadataCollection->getDocumentMetadata($documentClass), $document);
+                } else {
+                    $this->persist($document);
+                }
                 // Send the bulk request every 1000 documents, so it doesn't get too big
                 if ($i % 1000 == 0) {
                     $this->commit();
@@ -422,9 +427,9 @@ class IndexManager
     }
 
     /**
-     * Adds document to next flush.
+     * Adds document to a bulk request for the next flush.
      *
-     * @param DocumentInterface $document
+     * @param DocumentInterface $document The document entity to index in ES
      */
     public function persist(DocumentInterface $document)
     {
@@ -433,19 +438,30 @@ class IndexManager
             new ElasticsearchPersistEvent($this->getConnection(), $document)
         );
 
-        $mapping = $this->getDocumentMapping($document);
+        $documentMetadata = $this->metadataCollection->getDocumentMetadata(get_class($document));
         $documentArray = $this->getConverter()->convertToArray($document);
 
-        $this->getConnection()->addBulkOperation(
-            'index',
-            $this->writeAlias,
-            $mapping->getType(),
-            $documentArray
-        );
+        $this->persistRaw($documentMetadata->getType(), $documentArray);
 
         $this->dispatchEvent(
             Events::POST_PERSIST,
             new ElasticsearchPersistEvent($this->getConnection(), $document)
+        );
+    }
+
+    /**
+     * Adds a prepared document array to a bulk request for the next flush.
+     *
+     * @param string $type          Elasticsearch type name
+     * @param array  $documentArray The document to index in ES
+     */
+    public function persistRaw($type, array $documentArray)
+    {
+        $this->getConnection()->addBulkOperation(
+            'index',
+            $this->writeAlias,
+            $type,
+            $documentArray
         );
     }
 
@@ -508,45 +524,45 @@ class IndexManager
 //        return $this->metadataCollection->getTypesMap();
 //    }
 
-    /**
-     * Checks if specified repository and type is defined, throws exception otherwise.
-     *
-     * @param string $type
-     *
-     * @throws \InvalidArgumentException
-     */
-    private function checkRepositoryType(&$type)
-    {
-        $mapping = $this->getBundlesMapping();
-
-        if (array_key_exists($type, $mapping)) {
-            return;
-        }
-
-        if (array_key_exists($type . 'Document', $mapping)) {
-            $type .= 'Document';
-
-            return;
-        }
-
-        $exceptionMessage = "Undefined repository `{$type}`, valid repositories are: `" .
-            join('`, `', array_keys($this->getBundlesMapping())) . '`.';
-        throw new \InvalidArgumentException($exceptionMessage);
-    }
-
 //    /**
-//     * Returns converter instance.
+//     * Checks if specified repository and type is defined, throws exception otherwise.
 //     *
-//     * @return Converter
+//     * @param string $type
+//     *
+//     * @throws \InvalidArgumentException
 //     */
-//    private function getConverter()
+//    private function checkRepositoryType(&$type)
 //    {
-//        if (!$this->converter) {
-//            $this->converter = new Converter($this->getTypesMapping(), $this->getBundlesMapping());
+//        $mapping = $this->getBundlesMapping();
+//
+//        if (array_key_exists($type, $mapping)) {
+//            return;
 //        }
 //
-//        return $this->converter;
+//        if (array_key_exists($type . 'Document', $mapping)) {
+//            $type .= 'Document';
+//
+//            return;
+//        }
+//
+//        $exceptionMessage = "Undefined repository `{$type}`, valid repositories are: `" .
+//            join('`, `', array_keys($this->getBundlesMapping())) . '`.';
+//        throw new \InvalidArgumentException($exceptionMessage);
 //    }
+
+    /**
+     * Returns converter instance.
+     *
+     * @return Converter
+     */
+    private function getConverter()
+    {
+        if (!$this->converter) {
+            $this->converter = new Converter($this->metadataCollection);
+        }
+
+        return $this->converter;
+    }
 
     /**
      * Dispatches an event, if eventDispatcher is set.

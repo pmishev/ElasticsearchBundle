@@ -18,34 +18,50 @@ class DocumentMetadataCollection
     private $metadata;
 
     /**
-     * @var array
+     * @var DocumentFinder
      */
-    private $typesMap = [];
+    private $finder;
 
     /**
-     * @param array $metadata
+     * @var array Mappings of ES type names to their managing document classes
      */
-    public function __construct(array $metadata)
+    private $typeToClassMap = [];
+
+    /**
+     * @param DocumentFinder $finder
+     * @param array          $metadata
+     */
+    public function __construct(DocumentFinder $finder, array $metadata)
     {
+        $this->finder = $finder;
         $this->metadata = $metadata;
     }
 
-//    /**
-//     * Return a list of type namespaces
-//     *
-//     * @return array
-//     */
-//    public function getTypes()
-//    {
-//        return array_keys($this->metadata);
-//    }
+    /**
+     * Returns all document classes in the collection as keys and the corresponding index that manages them as values
+     *
+     * @return array
+     */
+    public function getDocumentClassesIndices()
+    {
+        $result = [];
+        foreach ($this->metadata as $index => $types) {
+            foreach ($types as $typeDocumentClass => $documentMetadata) {
+                $result[$typeDocumentClass] = $index;
+            }
+        }
+
+        return $result;
+    }
 
     /**
-     * Returns the document classes names for an index
+     * Returns the document classes names (in short notation, i.e. AppBundle:Product) for an index
      *
      * @param string $indexManagerName
      * @return array
      * @throws \HttpInvalidParamException
+     *
+     * TODO: maybe rename this to getMetadataForIndex
      */
     public function getDocumentClassesForIndex($indexManagerName)
     {
@@ -60,38 +76,6 @@ class DocumentMetadataCollection
     }
 
     /**
-     * Returns type map.
-     *
-     * @return array
-     */
-    public function getTypesMap()
-    {
-        if (empty($this->typesMap)) {
-            $this->typesMap = $this->extractTypeMap();
-        }
-
-        return $this->typesMap;
-    }
-
-    /**
-     * Returns metadata.
-     *
-     * @param array $repositories
-     *
-     * @return DocumentMetadata[]
-     *
-     * TODO: $repositories should be renamed to $documentClasses
-     */
-    public function getMetadata($repositories = [])
-    {
-        if (!empty($repositories)) {
-            return array_intersect_key($this->metadata, array_flip($repositories));
-        }
-
-        return $this->metadata;
-    }
-
-    /**
      * Returns metadata for the specified document class short name (e.g AppBundle:Product)
      *
      * @param string $documentClass
@@ -99,6 +83,7 @@ class DocumentMetadataCollection
      */
     public function getDocumentMetadata($documentClass)
     {
+        $documentClass = $this->finder->getShortClassName($documentClass);
         foreach ($this->metadata as $index => $types) {
             foreach ($types as $typeDocumentClass => $documentMetadata) {
                 if ($documentClass === $typeDocumentClass) {
@@ -110,18 +95,67 @@ class DocumentMetadataCollection
     }
 
     /**
-     * Extracts type map from metadata.
+     * Returns mapping of an ES type name to the short class name of the document entity managing that type
      *
      * @return array
      */
-    private function extractTypeMap()
+    public function getTypeToClassMap()
     {
-        $out = [];
-
-        foreach ($this->metadata as $repository => $data) {
-            $out[$data->getType()] = $repository;
+        if (empty($this->typeToClassMap)) {
+            $this->typeToClassMap = $this->extractTypeToClassMap();
         }
 
-        return $out;
+        return $this->typeToClassMap;
+    }
+
+    /**
+     * Extracts mapping of an ES type name to the short class name of the document entity managing that type
+     *
+     * @return array
+     */
+    private function extractTypeToClassMap()
+    {
+        $result = [];
+
+        foreach ($this->metadata as $index => $types) {
+            foreach ($types as $typeDocumentClass => $documentMetadata) {
+                $result[$documentMetadata->getType()] = $typeDocumentClass;
+            }
+        }
+
+        return $result;
+    }
+
+// TODO: Review the necessity of methods below
+
+//    /**
+//     * Return a list of type namespaces
+//     *
+//     * @return array
+//     */
+//    public function getTypes()
+//    {
+//        return array_keys($this->metadata);
+//    }
+
+
+
+    /**
+     * Returns metadata.
+     *
+     * @param array $repositories
+     *
+     * @return DocumentMetadata[]
+     *
+     * TODO: $repositories should be renamed to $documentClasses
+     * TODO: now metadata is first indexed by indices
+     */
+    public function getMetadata($repositories = [])
+    {
+        if (!empty($repositories)) {
+            return array_intersect_key($this->metadata, array_flip($repositories));
+        }
+
+        return $this->metadata;
     }
 }
