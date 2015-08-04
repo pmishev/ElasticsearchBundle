@@ -11,9 +11,14 @@ use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection;
 abstract class AbstractProvider implements ProviderInterface
 {
     /**
-     * @var DocumentMetadata The metadata for the ES type the provider is for
+     * @var DocumentMetadataCollection
      */
-    private $documentMetadata;
+    private $metadataCollection;
+
+    /**
+     * @var string The type the provider is for
+     */
+    private $documentClass;
 
     /**
      * @param string                     $documentClass The type the provider is for
@@ -21,15 +26,32 @@ abstract class AbstractProvider implements ProviderInterface
      */
     public function __construct($documentClass, DocumentMetadataCollection $metadata)
     {
-        $this->documentMetadata = $metadata->getDocumentMetadata($documentClass);
+        $this->metadataCollection = $metadata;
+        $this->documentClass = $documentClass;
     }
 
     /**
-     * @return DocumentMetadata
+     * @return string
+     */
+    protected function getDocumentClass()
+    {
+        return $this->documentClass;
+    }
+
+    /**
+     * @return DocumentMetadataCollection
+     */
+    protected function getMetadataCollection()
+    {
+        return $this->metadataCollection;
+    }
+
+    /**
+     * @return DocumentMetadata The metadata for the ES type the provider is for
      */
     protected function getDocumentMetadata()
     {
-        return $this->documentMetadata;
+        return $this->metadataCollection->getDocumentMetadata($this->documentClass);
     }
 
     /**

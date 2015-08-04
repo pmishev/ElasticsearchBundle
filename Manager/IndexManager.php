@@ -378,7 +378,7 @@ class IndexManager
             $i = 1;
             foreach ($typeDataProvider->getDocuments() as $document) {
                 if (is_array($document)) {
-                    $this->persistRaw($this->metadataCollection->getDocumentMetadata($documentClass), $document);
+                    $this->persistRaw($this->metadataCollection->getDocumentMetadata($documentClass)->getType(), $document);
                 } else {
                     $this->persist($document);
                 }

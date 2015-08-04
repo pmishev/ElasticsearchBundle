@@ -18,19 +18,29 @@ class ElasticsearchProvider extends AbstractProvider
     /**
      * @var The type the data is coming from
      */
-    protected $sourceTypeClass;
+    protected $sourceDocumentClass;
 
     /**
-     * @param string                     $documentClass      The type the provider is for
-     * @param DocumentMetadataCollection $metadata           The metadata collection for all ES types
-     * @param IndexManager               $sourceIndexManager The index manager of the data source
-     * @param string                     $sourceTypeClass    The type the data is coming from
+     * @var string Specify how long a consistent view of the index should be maintained for a scrolled search
      */
-    public function __construct($documentClass, DocumentMetadataCollection $metadata, IndexManager $sourceIndexManager, $sourceTypeClass)
+    protected $scrollTime = '5m';
+
+    /**
+     * @var int Number of documents in one chunk sent to ES
+     */
+    protected $chunkSize = 500;
+
+    /**
+     * @param string                     $documentClass       The type the provider is for
+     * @param DocumentMetadataCollection $metadata            The metadata collection for all ES types
+     * @param IndexManager               $sourceIndexManager  The index manager of the data source
+     * @param string                     $sourceDocumentClass The type the data is coming from
+     */
+    public function __construct($documentClass, DocumentMetadataCollection $metadata, IndexManager $sourceIndexManager, $sourceDocumentClass)
     {
         parent::__construct($documentClass, $metadata);
         $this->sourceIndexManager = $sourceIndexManager;
-        $this->$sourceTypeClass = $sourceTypeClass;
+        $this->sourceDocumentClass = $sourceDocumentClass;
     }
 
     /**
@@ -40,68 +50,36 @@ class ElasticsearchProvider extends AbstractProvider
      */
     public function getDocuments()
     {
-
-    }
-
-    /**
-     * Build and return a document entity from the data source, ready for insertion into ES
-     *
-     * @param int|string $id
-     * @return DocumentInterface
-     */
-    public function getDocument($id)
-    {
-
-    }
-
-    /**
-     * Reindex all documents from one index to another using scan-and-scroll
-     *
-     * @param string $sourceIndex Index to read documents from
-     * @param string $targetIndex Name of the index to populate
-     * @param int    $chunkSize   Number of docs in one chunk sent to ES (default: 500)
-     * @param string $scroll      Specify how long a consistent view of the index should be maintained for scrolled search
-     *
-     * @return void
-     *
-     * TODO: remove this function, as the reindexing will be handled by data provider classes
-     */
-    public function reindex($sourceIndex, $targetIndex, $chunkSize = 500, $scroll = '5m')
-    {
         // Build a scan search request
         $params = array(
             'search_type' => 'scan',
-            'scroll' => $scroll,
-            'size' => $chunkSize,
-            'index' => $sourceIndex,
+            'scroll' => $this->scrollTime,
+            'size' => $this->chunkSize,
+            'index' => $this->sourceIndexManager->getLiveIndex(),
+            'type' => $this->getMetadataCollection()->getDocumentMetadata($this->sourceDocumentClass)->getType()
         );
 
         // Get the scroll ID
-        $docs = $this->client()->search($params);
+        $docs = $this->sourceIndexManager->getConnection()->getClient()->search($params);
         $scrollId = $docs['_scroll_id'];
 
         // Loop while there are results
         while (\true) {
             // Execute a scroll request
-            $response = $this->client()->scroll(
+            $response = $this->sourceIndexManager->getConnection()->getClient()->scroll(
                 array(
                     'scroll_id' => $scrollId,
-                    'scroll' => $scroll
+                    'scroll' => $this->scrollTime
                 )
             );
             if (count($response['hits']['hits']) > 0) {
                 // Bulk request for save batch
                 foreach ($response['hits']['hits'] as $hit) {
-                    $bulkParams['body'][] = array(
-                        'index' => array(
-                            '_index' => $targetIndex,
-                            '_type' => $hit['_type'],
-                            '_id' => $hit['_id'],
-                        )
-                    );
-                    $bulkParams['body'][] = $hit['_source'];
+                    $doc = $hit['_source'];
+                    $doc['_id'] = $hit['_id'];
+                    yield $doc;
                 }
-                $this->client()->bulk($bulkParams);
+
                 // Get the new scroll_id
                 $scrollId = $response['_scroll_id'];
             } else {
@@ -109,6 +87,27 @@ class ElasticsearchProvider extends AbstractProvider
                 break;
             }
         }
+
+    }
+
+    /**
+     * Build and return a document from the data source, ready for insertion into ES
+     *
+     * @param int|string $id
+     * @return array
+     */
+    public function getDocument($id)
+    {
+        $params = [
+            'index' => $this->sourceIndexManager->getLiveIndex(),
+            'type' => $this->getMetadataCollection()->getDocumentMetadata($this->sourceDocumentClass)->getType(),
+            'id' => $id
+        ];
+        $doc = $this->sourceIndexManager->getConnection()->getClient()->get($params);
+        $result = $doc['_source'];
+        $result['_id'] = $doc['_id'];
+
+        return $result;
     }
 
 }
