@@ -156,25 +156,6 @@ class ConnectionManager
     }
 
 //    /**
-//     * Execute scrolled search.
-//     *
-//     * @param string $scrollId       Scroll id.
-//     * @param string $scrollDuration Specify how long a consistent view of the index should be maintained
-//     *                               for scrolled search.
-//     *
-//     * @return array
-//     */
-//    public function scroll($scrollId, $scrollDuration)
-//    {
-//        $params = [];
-//        $params['scroll_id'] = $scrollId;
-//        $params['scroll'] = $scrollDuration;
-//
-//        return $this->getClient()->scroll($params);
-//    }
-
-
-//    /**
 //     * Puts mapping into elasticsearch client.
 //     *
 //     * @param array $types Specific types to put.
