@@ -48,8 +48,8 @@ class SineflowElasticsearchExtension extends Extension
         $this->addMetadataCollectionDefinition($config, $container);
         $this->addConnectionDefinitions($config, $container);
 
-//        $this->addDocumentsResource($config, $container);
-//        $this->addDataCollectorDefinition($config, $container);
+        $this->addDocumentsResource($config, $container);
+        $this->addDataCollectorDefinition($config, $container);
 //
 //        $this->addClassesToCompile(
 //            [
@@ -108,16 +108,6 @@ class SineflowElasticsearchExtension extends Extension
 //                $container->getParameter('kernel.debug'),
 //            ]
 //        );
-
-//        $metadataCollector = new Definition(
-//            'Sineflow\ElasticsearchBundle\Mapping\MetadataCollector',
-//            [
-//                new Reference('sfes.document_finder'),
-//                $documentParser,
-//                $proxyLoader,
-//            ]
-//        );
-//        $container->setDefinition('sfes.metadata_collector', $metadataCollector);
 
         $metadataCollector = new Definition(
             'Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector',
@@ -233,123 +223,133 @@ class SineflowElasticsearchExtension extends Extension
             $params['logging'] = true;
             $params['logPath'] = $connectionSettings['log_path'];
             $params['logLevel'] = $connectionSettings['log_level'];
+
+            // TODO: these settings don't matter when a traceObject is defined, so I need to figure out a way to use them within our custom traceObject
             $params['tracePath'] = $connectionSettings['trace_path'];
             $params['traceLevel'] = $connectionSettings['trace_level'];
+
             // TODO: add support for custom logger objects
-//            $params['logObject'] = new Reference('es.logger.trace');
-//            $params['traceObject'] = new Reference('es.logger.trace');
+//            $params['logObject'] = new Reference('sfes.logger.trace');
+
+            // This is necessary for the data collector, so we can show debug info in the web toolbar
+            $params['traceObject'] = new Reference('sfes.logger.trace');
         }
 
         return $params;
     }
 
+    /**
+     * Adds document directory resource.
+     * This is done, so if any entity definition is changed, the cache can be rebuilt
+     *
+     * @param array            $config
+     * @param ContainerBuilder $container
+     */
+    private function addDocumentsResource(array $config, ContainerBuilder $container)
+    {
+        $watchedBundles = [];
+        foreach ($config['indices'] as $index) {
+            foreach ($index['types'] as $typeEntity) {
+                // Get the bundle name from the entity class short syntax (e.g. AppBundle:Product)
+                $bundleName = substr($typeEntity, 0, strpos($typeEntity, ':'));
+                $watchedBundles[$bundleName] = true;
+            }
+        }
 
-//
-//    /**
-//     * Adds document directory file resource.
-//     *
-//     * @param array            $config
-//     * @param ContainerBuilder $container
-//     */
-//    private function addDocumentsResource(array $config, ContainerBuilder $container)
-//    {
-//        $watchedBundles = [];
-//        // TODO: uncomment when needed
-////        foreach ($config['managers'] as $manager) {
-////            $watchedBundles = array_merge($watchedBundles, $manager['mappings']);
-////        }
-//
-//        $watchedBundles = array_intersect_key(
-//            $container->getParameter('kernel.bundles'),
-//            array_flip(array_unique($watchedBundles))
-//        );
-//
-//        foreach ($watchedBundles as $name => $class) {
-//            $bundle = new \ReflectionClass($class);
-//            $dir = dirname($bundle->getFileName()) . DIRECTORY_SEPARATOR . $config['document_dir'];
-//            $container->addResource(new DirectoryResource($dir));
+        // Get the bundles' classes from the container registered bundles
+        $watchedBundles = array_intersect_key(
+            $container->getParameter('kernel.bundles'),
+            $watchedBundles
+        );
+
+        foreach ($watchedBundles as $name => $class) {
+            $bundle = new \ReflectionClass($class);
+            $dir = dirname($bundle->getFileName()) . DIRECTORY_SEPARATOR . $config['document_dir'];
+            $container->addResource(new DirectoryResource($dir));
+        }
+    }
+
+    /**
+     * Adds data collector to container
+     *
+     * @param array            $config
+     * @param ContainerBuilder $container
+     */
+    private function addDataCollectorDefinition(array $config, ContainerBuilder $container)
+    {
+        if ($this->isDebugSet($config)) {
+            $container->setDefinition('sfes.logger.trace', $this->getLogTraceDefinition());
+            $container->setDefinition('sfes.collector', $this->getDataCollectorDefinition(['sfes.logger.trace']));
+        }
+    }
+
+    /**
+     * Finds out if debug is set to any manager.
+     *
+     * @param array $config
+     *
+     * @return bool
+     */
+    private function isDebugSet(array $config)
+    {
+        // TODO: Do I want to have a debug setting at all or maybe set this depending on if the symfony profiler is enabled
+        return true;
+
+//        foreach ($config['managers'] as $manager) {
+//            if ($manager['debug']['enabled'] === true) {
+//                return true;
+//            }
 //        }
-//    }
-//
-//    /**
-//     * Adds data collector to container if debug is set to any manager.
-//     *
-//     * @param array            $config
-//     * @param ContainerBuilder $container
-//     */
-//    private function addDataCollectorDefinition(array $config, ContainerBuilder $container)
-//    {
-//        if ($this->isDebugSet($config)) {
-//            $container->setDefinition('es.logger.trace', $this->getLogTraceDefinition());
-//            $container->setDefinition('es.collector', $this->getDataCollectorDefinition(['es.logger.trace']));
-//        }
-//    }
-//
-//    /**
-//     * Finds out if debug is set to any manager.
-//     *
-//     * @param array $config
-//     *
-//     * @return bool
-//     */
-//    private function isDebugSet(array $config)
-//    {
-//        // TODO: uncomment when needed
-////        foreach ($config['managers'] as $manager) {
-////            if ($manager['debug']['enabled'] === true) {
-////                return true;
-////            }
-////        }
 //
 //        return false;
-//    }
-//
-//    /**
-//     * Returns logger used for collecting data.
-//     *
-//     * @return Definition
-//     */
-//    private function getLogTraceDefinition()
-//    {
-//        $handler = new Definition('ONGR\ElasticsearchBundle\Logger\Handler\CollectionHandler', []);
-//
-//        $logger = new Definition(
-//            'Monolog\Logger',
-//            [
-//                'tracer',
-//                [$handler],
-//            ]
-//        );
-//
-//        return $logger;
-//    }
-//
-//    /**
-//     * Returns elasticsearch data collector definition.
-//     *
-//     * @param array $loggers
-//     *
-//     * @return Definition
-//     */
-//    private function getDataCollectorDefinition($loggers = [])
-//    {
-//        $collector = new Definition('ONGR\ElasticsearchBundle\DataCollector\ElasticsearchDataCollector');
-//        $collector->addMethodCall('setManagers', [new Parameter('es.managers')]);
-//
-//        foreach ($loggers as $logger) {
-//            $collector->addMethodCall('addLogger', [new Reference($logger)]);
-//        }
-//
-//        $collector->addTag(
-//            'data_collector',
-//            [
-//                'template' => 'ONGRElasticsearchBundle:Profiler:profiler.html.twig',
-//                'id' => 'es',
-//            ]
-//        );
-//
-//        return $collector;
-//    }
+    }
+
+    /**
+     * Returns logger used for collecting data.
+     *
+     * @return Definition
+     */
+    private function getLogTraceDefinition()
+    {
+        $handler = new Definition('Sineflow\ElasticsearchBundle\Logger\Handler\CollectionHandler', [new Reference('request_stack')]);
+
+        $logger = new Definition(
+            'Monolog\Logger',
+            [
+                'tracer',
+                [$handler],
+            ]
+        );
+
+        return $logger;
+    }
+
+    /**
+     * Returns elasticsearch data collector definition.
+     *
+     * @param array $loggers
+     *
+     * @return Definition
+     */
+    private function getDataCollectorDefinition($loggers = [])
+    {
+        $collector = new Definition('Sineflow\ElasticsearchBundle\DataCollector\ElasticsearchDataCollector');
+        $collector->addMethodCall('setIndexManagers', [new Parameter('sfes.indices')]);
+
+        foreach ($loggers as $logger) {
+            $collector->addMethodCall('addLogger', [new Reference($logger)]);
+        }
+
+        $collector->addTag(
+            'data_collector',
+            [
+                'template' => 'SineflowElasticsearchBundle:Profiler:profiler.html.twig',
+                'id' => 'sfes',
+            ]
+        );
+
+        return $collector;
+    }
 
     /**
      * Returns cache directory.
