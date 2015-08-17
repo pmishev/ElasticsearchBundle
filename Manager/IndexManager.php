@@ -240,7 +240,7 @@ class IndexManager
     }
 
     /**
-     * Creates fresh elasticsearch index.
+     * Creates elasticsearch index and adds aliases to it depending on index settings
      *
      * @param bool $putWarmers Determines if warmers should be loaded.
      * @param bool $noMapping  Determines if mapping should be included.

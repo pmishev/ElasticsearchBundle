@@ -35,6 +35,7 @@ class SineflowElasticsearchExtension extends Extension
     {
         $configuration = $this->getConfiguration($configs, $container);
         $config = $this->processConfiguration($configuration, $configs);
+        $this->removeAbstractIndices($config['indices']);
 
         $loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__ . '/../Resources/config'));
         $loader->load('services.yml');
@@ -56,6 +57,21 @@ class SineflowElasticsearchExtension extends Extension
 //                'ONGR\ElasticsearchBundle\Mapping\Proxy\ProxyInterface',
 //            ]
 //        );
+    }
+
+    /**
+     * Remove the abstract indices, which are only user as a template, from the indices list
+     *
+     * @param array $indices The indices config array
+     */
+    private function removeAbstractIndices(array &$indices)
+    {
+        foreach ($indices as $indexManagerName => $indexSettings) {
+            // Skip abstract index definitions, as they are only used as templates for real ones
+            if (isset($indexSettings['abstract']) && true === $indexSettings['abstract']) {
+                unset($indices[$indexManagerName]);
+            }
+        }
     }
 
     /**
@@ -127,11 +143,6 @@ class SineflowElasticsearchExtension extends Extension
         $indices = $config['indices'];
 
         foreach ($indices as $indexManagerName => $indexSettings) {
-            // Skip abstract index definitions, as they are only used as templates for real ones
-            if (isset($indexSettings['abstract']) && true === $indexSettings['abstract']) {
-                continue;
-            }
-
             $documentsMetadataDefinitions[$indexManagerName] = $this->getDocumentsMetadataDefinitions($container, $indexSettings);
 
             $documentsMetadataCollection = new Definition(
