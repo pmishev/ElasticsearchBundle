@@ -201,16 +201,6 @@ class IndexManager
     }
 
     /**
-     * TODO: Checks if index is already created.
-     *
-     * @return bool
-     */
-    public function indexExists()
-    {
-        return $this->getConnection()->getClient()->indices()->exists(['index' => $this->getIndexName()]);
-    }
-
-    /**
      * Returns the base index name this manager is attached to.
      *
      * When using aliases, this would not represent an actual physical index.
@@ -244,6 +234,7 @@ class IndexManager
      *
      * @param bool $putWarmers Determines if warmers should be loaded.
      * @param bool $noMapping  Determines if mapping should be included.
+     * @throw \Exception
      */
     public function createIndex($putWarmers = false, $noMapping = false)
     {
@@ -324,20 +315,59 @@ class IndexManager
      * Returns the live physical index name
      *
      * @return string
+     * @throws \RuntimeException If live index is not found
      */
     public function getLiveIndex()
     {
+        $indexName = null;
+
+        $indices = $this->getConnection()->getClient()->indices();
+
         if (true === $this->getUseAliases()) {
-            $indexName = key($this->getConnection()->getClient()->indices()->getAlias(array('name' => $this->readAlias)));
+            if ($indices->existsAlias(['name' => $this->readAlias])) {
+                $indexName = key($indices->getAlias(['name' => $this->readAlias]));
+            }
         } else {
             $indexName = $this->getBaseIndexName();
+        }
+
+        if (!$indexName || !$indices->exists(['index' => $indexName])) {
+            throw new \RuntimeException('Live index not found');
         }
 
         return $indexName;
     }
 
     /**
-     * Rebuilds ES Index
+     * Checks if the index exists and has its read and write aliases attached to it
+     *
+     * @return bool
+     */
+    public function indexExists()
+    {
+        $result = false;
+
+        $indices = $this->getConnection()->getClient()->indices();
+        if (true === $this->getUseAliases()) {
+            // Check if we have a read and write alias pointing to the same index
+            if ($indices->existsAlias(['name' => $this->readAlias])) {
+                $readAliasIndices = array_keys($indices->getAlias(['name' => $this->readAlias]));
+                if ($indices->existsAlias(['name' => $this->writeAlias])) {
+                    $writeAliasIndices = array_keys($indices->getAlias(['name' => $this->writeAlias]));
+                }
+                if (!empty(array_intersect($readAliasIndices, $writeAliasIndices))) {
+                    $result = true;
+                }
+            }
+        } else {
+            $result = $indices->exists(['index' => $this->getBaseIndexName()]);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Rebuilds ES Index and deletes the old one
      *
      * @throws \Exception
      */
@@ -345,6 +375,12 @@ class IndexManager
     {
         if (false === $this->getUseAliases()) {
             throw new \Exception('Index rebuilding is not supported, unless you use aliases');
+        }
+
+        // Make sure the index already exists
+        if (!$this->indexExists()) {
+            // Try to create a new one
+            $this->createIndex();
         }
 
         // Create a new index

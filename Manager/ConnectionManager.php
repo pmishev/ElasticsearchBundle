@@ -54,6 +54,14 @@ class ConnectionManager
     }
 
     /**
+     * @return array
+     */
+    public function getConnectionSettings()
+    {
+        return $this->connectionSettings;
+    }
+
+    /**
      * Adds query to bulk queries container.
      *
      * @param string $operation One of: index, update, delete, create.
