@@ -9,6 +9,9 @@ use Sineflow\ElasticsearchBundle\Document\Repository\Repository;
 use Sineflow\ElasticsearchBundle\Event\ElasticsearchCommitEvent;
 use Sineflow\ElasticsearchBundle\Event\ElasticsearchPersistEvent;
 use Sineflow\ElasticsearchBundle\Event\Events;
+use Sineflow\ElasticsearchBundle\Exception\Exception;
+use Sineflow\ElasticsearchBundle\Exception\IndexRebuildingException;
+use Sineflow\ElasticsearchBundle\Exception\NoReadAliasException;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection;
 use Sineflow\ElasticsearchBundle\Result\Converter;
@@ -321,6 +324,7 @@ class IndexManager
     {
         $indexName = null;
 
+        // Get indices namespace of ES client
         $indices = $this->getConnection()->getClient()->indices();
 
         if (true === $this->getUseAliases()) {
@@ -339,9 +343,11 @@ class IndexManager
     }
 
     /**
-     * Checks if the index exists and has its read and write aliases attached to it
+     * Checks if the index exists and has its read and write aliases attached to it (if using aliases)
      *
      * @return bool
+     *
+     * @deprecated Use verifyIndexAndAliasesState instead
      */
     public function indexExists()
     {
@@ -367,6 +373,52 @@ class IndexManager
     }
 
     /**
+     * @param bool|true $exceptionIfRebuilding
+     * @throws NoReadAliasException     When read alias does not exist
+     * @throws IndexRebuildingException When the index is rebuilding, according to the current aliases
+     * @throws Exception                When any other problem with the index or aliases mappings exists
+     */
+    public function verifyIndexAndAliasesState($exceptionIfRebuilding = true)
+    {
+        if (false === $this->getUseAliases()) {
+            // Check that the index exists
+            if (!$this->getConnection()->getClient()->indices()->exists(['index' => $this->getBaseIndexName()])) {
+                throw new Exception(sprintf('Index "%s" does not exist', $this->getBaseIndexName()));
+            }
+        } else {
+            $aliases = $this->getConnection()->getAliases();
+
+            // Check that read alias exists
+            if (!isset($aliases[$this->readAlias])) {
+                throw new NoReadAliasException(sprintf('Read alias "%s" does not exist', $this->readAlias));
+            }
+            $liveIndex = key($aliases[$this->readAlias]);
+
+            // Check that read alias points to exactly 1 index
+            if (count($aliases[$this->readAlias]) > 1) {
+                throw new Exception(sprintf('Read alias "%s" points to more than one index (%s)', $this->readAlias, implode(', ', $aliases[$this->readAlias])));
+            }
+
+            // Check that write alias exists
+            if (!isset($aliases[$this->writeAlias])) {
+                throw new Exception(sprintf('Write alias "%s" does not exist', $this->writeAlias));
+            }
+
+            // Check that write alias points to the same index as the read alias
+            if (!isset($aliases[$this->writeAlias][$liveIndex])) {
+                throw new Exception(sprintf('Write alias "%s" does not point to the live index "%s"', $this->writeAlias, $liveIndex));
+            }
+
+            // Check if write alias points to more than one index
+            if ($exceptionIfRebuilding && count($aliases[$this->writeAlias]) > 1) {
+                $writeAliasIndices = $aliases[$this->writeAlias];
+                unset($writeAliasIndices[$liveIndex]);
+                throw new IndexRebuildingException(sprintf('Index is currently being rebuilt as "%s"', implode(', ', array_keys($writeAliasIndices))));
+            }
+        }
+    }
+
+    /**
      * Rebuilds ES Index and deletes the old one
      *
      * @throws \Exception
@@ -377,10 +429,14 @@ class IndexManager
             throw new \Exception('Index rebuilding is not supported, unless you use aliases');
         }
 
-        // Make sure the index already exists
-        if (!$this->indexExists()) {
-            // Try to create a new one
+        try {
+            // Make sure the index and both aliases are properly set
+            $this->verifyIndexAndAliasesState();
+        } catch (NoReadAliasException $e) {
+            // Looks like the index doesn't exist, so try to create an empty one
             $this->createIndex();
+            // Now again make sure that everything is setup correctly
+            $this->verifyIndexAndAliasesState();
         }
 
         // Create a new index
@@ -459,6 +515,7 @@ class IndexManager
         $this->getConnection()->getClient()->indices()->updateAliases($setAliasParams);
 
         // Delete the old index
+        // TODO: only delete if there were no errors or warnings in the bulk requests
         $this->getConnection()->getClient()->indices()->delete(['index' => $oldIndex]);
     }
 

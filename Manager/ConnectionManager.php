@@ -163,6 +163,26 @@ class ConnectionManager
         $this->getClient()->indices()->flush();
     }
 
+    /**
+     * Return all defined aliases in the ES cluster with all indices they point to
+     *
+     * @return array The ES aliases
+     */
+    public function getAliases()
+    {
+        $aliases = [];
+        // Get all indices and their linked aliases and invert the results
+        $indices = $this->getClient()->indices()->getAliases();
+        foreach ($indices as $index => $data) {
+            foreach ($data['aliases'] as $alias => $aliasData) {
+                $aliases[$alias][$index] = [];
+            }
+        }
+
+        return $aliases;
+    }
+
+
 //    /**
 //     * Puts mapping into elasticsearch client.
 //     *
