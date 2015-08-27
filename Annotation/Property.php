@@ -72,7 +72,7 @@ final class Property extends AbstractProperty
     /**
      * @var array
      */
-    public $fielddata;
+    public $fieldData;
 
     /**
      * @var string Object name to map.
@@ -80,6 +80,8 @@ final class Property extends AbstractProperty
     public $objectName;
 
     /**
+     * Defines if related object will have one or multiple values.
+     *
      * @var bool OneToOne or OneToMany.
      */
     public $multiple;
@@ -100,22 +102,12 @@ final class Property extends AbstractProperty
     public $indexName;
 
     /**
-     * @var bool
-     */
-    public $geohash;
-
-    /**
-     * @var bool
-     */
-    public $geohashPrefix;
-
-    /**
-     * @var string
-     */
-    public $geohashPrecision;
-
-    /**
      * @var string
      */
     public $format;
+
+    /**
+     * @var array
+     */
+    public $raw;
 }

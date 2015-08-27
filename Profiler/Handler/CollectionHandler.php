@@ -1,6 +1,6 @@
 <?php
 
-namespace Sineflow\ElasticsearchBundle\Logger\Handler;
+namespace Sineflow\ElasticsearchBundle\Profiler\Handler;
 
 use Monolog\Handler\AbstractProcessingHandler;
 use Symfony\Component\HttpFoundation\Request;

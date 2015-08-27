@@ -1,9 +1,9 @@
 <?php
 
-namespace Sineflow\ElasticsearchBundle\DataCollector;
+namespace Sineflow\ElasticsearchBundle\Profiler;
 
 use Monolog\Logger;
-use Sineflow\ElasticsearchBundle\Logger\Handler\CollectionHandler;
+use Sineflow\ElasticsearchBundle\Profiler\Handler\CollectionHandler;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\DataCollector\DataCollectorInterface;
@@ -11,7 +11,7 @@ use Symfony\Component\HttpKernel\DataCollector\DataCollectorInterface;
 /**
  * Data collector for profiling elasticsearch bundle.
  */
-class ElasticsearchDataCollector implements DataCollectorInterface
+class ElasticsearchProfiler implements DataCollectorInterface
 {
     const UNDEFINED_ROUTE = 'undefined_route';
 

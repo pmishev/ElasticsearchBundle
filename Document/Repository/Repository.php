@@ -4,10 +4,10 @@ namespace Sineflow\ElasticsearchBundle\Document\Repository;
 
 use Elasticsearch\Common\Exceptions\Missing404Exception;
 use Sineflow\ElasticsearchBundle\Document\DocumentInterface;
-use ONGR\ElasticsearchBundle\DSL\Query\TermsQuery;
-use ONGR\ElasticsearchBundle\DSL\Search;
-use ONGR\ElasticsearchBundle\DSL\Sort\Sort;
-use ONGR\ElasticsearchBundle\DSL\Suggester\AbstractSuggester;
+use ONGR\ElasticsearchDSL\Query\TermsQuery;
+use ONGR\ElasticsearchDSL\Search;
+use ONGR\ElasticsearchDSL\Sort\FieldSort;
+use ONGR\ElasticsearchDSL\Sort\Sort;
 use ONGR\ElasticsearchBundle\Result\Converter;
 use ONGR\ElasticsearchBundle\Result\DocumentIterator;
 use ONGR\ElasticsearchBundle\Result\DocumentScanIterator;
@@ -139,7 +139,7 @@ class Repository implements RepositoryInterface
         }
 
         foreach ($orderBy as $field => $direction) {
-            $search->addSort(new Sort($field, strcasecmp($direction, 'asc') == 0 ? Sort::ORDER_ASC : Sort::ORDER_DESC));
+            $search->addSort(new FieldSort($field, $direction));
         }
 
         return $this->execute($search, $resultType);
@@ -165,7 +165,7 @@ class Repository implements RepositoryInterface
         }
 
         foreach ($orderBy as $field => $direction) {
-            $search->addSort(new Sort($field, strcasecmp($direction, 'asc') == 0 ? Sort::ORDER_ASC : Sort::ORDER_DESC));
+            $search->addSort(new FieldSort($field, $direction));
         }
 
         $result = $this
@@ -262,32 +262,6 @@ s     *
         $results = $this->getManager()->getConnection()->scroll($scrollId, $scrollDuration);
 
         return $this->parseResult($results, $resultsType, $scrollDuration);
-    }
-
-    /**
-     * Get suggestions using suggest api.
-     *
-     * @param AbstractSuggester[]|AbstractSuggester $suggesters
-     *
-     * @return SuggestionIterator
-     *
-     * TODO: check if working
-     */
-    public function suggest($suggesters)
-    {
-        if (!is_array($suggesters)) {
-            $suggesters = [$suggesters];
-        }
-
-        $body = [];
-        /** @var AbstractSuggester $suggester */
-        foreach ($suggesters as $suggester) {
-            $body = array_merge($suggester->toArray(), $body);
-        }
-        $results = $this->getManager()->getConnection()->getClient()->suggest(['body' => $body]);
-        unset($results['_shards']);
-
-        return new SuggestionIterator($results);
     }
 
     /**
@@ -443,27 +417,6 @@ s     *
         }
 
         return $output;
-    }
-
-    /**
-     * Creates new instance of document.
-     *
-     * @return DocumentInterface
-     *
-     * @throws \LogicException
-     * TODO: fix
-     */
-    public function createDocument()
-    {
-        if (count($this->documentClasses) > 1) {
-            throw new \LogicException(
-                'Repository can not create new document when it is associated with multiple documentClasses'
-            );
-        }
-
-        $class = $this->getManager()->getBundlesMapping()[reset($this->documentClasses)]->getProxyNamespace();
-
-        return new $class();
     }
 
     /**

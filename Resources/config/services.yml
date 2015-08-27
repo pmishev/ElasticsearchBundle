@@ -4,6 +4,9 @@ parameters:
 #    sfes.logging.path: %kernel.logs_dir%/elasticsearch_%kernel.environment%.log
 #    sfes.export.class: ONGR\ElasticsearchBundle\Service\ExportService
 #    sfes.import.class: ONGR\ElasticsearchBundle\Service\ImportService
+    sfes.document_finder.class: Sineflow\ElasticsearchBundle\Mapping\DocumentFinder
+    sfes.doctrine.filesystem_cache.class: Doctrine\Common\Cache\FilesystemCache
+    sfes.document_parser.class: Sineflow\ElasticsearchBundle\Mapping\DocumentParser
 
 services:
     sfes.provider_registry:
@@ -21,3 +24,67 @@ services:
 #
 #    sfes.import:
 #        class: %sfes.import.class%
+
+    sfes.document_finder:
+        class: %sfes.document_finder.class%
+        arguments: [%kernel.bundles%]
+        calls:
+            - [setDocumentDir, ["%sfes.document_dir%"]]
+        public: false # TODO: shouldn't this be public?
+
+#    sfes.cache_engine:
+#        class: %sfes.doctrine.filesystem_cache.class%
+#        arguments: ["%kernel.cache_dir%/sineflow", ".sineflow.data"]
+#
+#    annotations.cached_reader:
+#        class: %annotations.cached_reader.class%
+#        arguments: [@annotations.reader, @sfes.cache_engine, %kernel.debug%]
+#        public: false # TODO: in ongr, it is public, but why?
+#
+#    sfes.document_parser:
+#        class: %sfes.document_parser.class%
+#        arguments: [@annotations.cached_reader, @sfes.document_finder]
+#        public: false
+#
+#    sfes.document_metadata_collector:
+#        class: %sfes.metadata_collector.class%
+#        arguments: [@sfes.document_finder, @sfes.document_parser]
+
+
+#
+#
+#parameters:
+#    es.metadata_collector.class: ONGR\ElasticsearchBundle\Mapping\MetadataCollector
+#    es.logger.collection_handler.class: ONGR\ElasticsearchBundle\Profiler\Handler\CollectionHandler
+#    es.profiler.class: ONGR\ElasticsearchBundle\Profiler\ElasticsearchProfiler
+#    es.metadata_cache.class: ONGR\ElasticsearchBundle\Mapping\MetadataCache
+#
+#    es.profiler.template: ONGRElasticsearchBundle:Profiler:profiler.html.twig
+#
+#services:
+##    es.export:
+##        class: %es.export.class%
+##
+##    es.import:
+##        class: %es.import.class%
+#
+#    es.logger.collection_handler:
+#        class: %es.logger.collection_handler.class%
+#        public: false
+#
+#    es.logger.ongr:
+#        class: %monolog.logger.class%
+#        arguments: ['ongr']
+#        calls:
+#            - [pushHandler, [@es.logger.collection_handler]]
+#
+#    es.metadata_cache:
+#        class: %es.metadata_cache.class%
+#
+#    es.profiler:
+#        class: %es.profiler.class%
+#        calls:
+#            - [setManagers, [%es.managers%]]
+#            - [addLogger, [@es.logger.ongr]]
+#        tags:
+#            - {name: data_collector, template: %es.profiler.template%, id: ongr}

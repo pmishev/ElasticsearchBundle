@@ -615,8 +615,8 @@ class IndexManager
 //    public function getDocumentMapping($document)
 //    {
 //        foreach ($this->getBundlesMapping() as $repository) {
-////            if (in_array(get_class($document), [$repository->getNamespace(), $repository->getProxyNamespace()])) {
-//            if (in_array(get_class($document), [$repository->resolveClassName(), $repository->getProxyNamespace()])) {
+////            if (get_class($document) == $repository->getNamespace()) {
+//            if (get_class($document) == $repository->resolveClassName()) {
 //                return $repository;
 //            }
 //        }

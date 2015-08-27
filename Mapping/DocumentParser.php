@@ -5,23 +5,16 @@ namespace Sineflow\ElasticsearchBundle\Mapping;
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\Reader;
 use Sineflow\ElasticsearchBundle\Annotation\Document;
-use Sineflow\ElasticsearchBundle\Annotation\Inherit;
+//use Sineflow\ElasticsearchBundle\Annotation\Inherit;
 use Sineflow\ElasticsearchBundle\Annotation\MultiField;
 use Sineflow\ElasticsearchBundle\Annotation\Property;
-use Sineflow\ElasticsearchBundle\Annotation\Skip;
-use Sineflow\ElasticsearchBundle\Annotation\Suggester\AbstractSuggesterProperty;
-//use Sineflow\ElasticsearchBundle\Mapping\Proxy\ProxyFactory;
+//use Sineflow\ElasticsearchBundle\Annotation\Skip;
 
 /**
  * Document parser used for reading document annotations.
  */
 class DocumentParser
 {
-    /**
-     * @const string
-     */
-    const SUGGESTER_PROPERTY_ANNOTATION = 'Sineflow\ElasticsearchBundle\Annotation\Suggester\AbstractSuggesterProperty';
-
     /**
      * @const string
      */
@@ -111,7 +104,6 @@ class DocumentParser
                     'aliases' => $this->getAliases($reflectionClass),
                     'objects' => $this->getObjects(),
                     'repositoryClass' => $class->repositoryClass,
-//                    'proxyNamespace' => ProxyFactory::getProxyNamespace($reflectionClass, true),
                 // TODO: what do I need these for?
 //                    'namespace' => $reflectionClass->getName(),
 //                    'class' => $reflectionClass->getShortName(),
@@ -127,16 +119,11 @@ class DocumentParser
      *
      * @param \ReflectionProperty $property
      *
-     * @return AbstractSuggesterProperty|Property
+     * @return Property
      */
     public function getPropertyAnnotationData($property)
     {
-        $type = $this->reader->getPropertyAnnotation($property, self::PROPERTY_ANNOTATION);
-        if ($type === null) {
-            $type = $this->reader->getPropertyAnnotation($property, self::SUGGESTER_PROPERTY_ANNOTATION);
-        }
-
-        return $type;
+        return $this->reader->getPropertyAnnotation($property, self::PROPERTY_ANNOTATION);
     }
 
     /**
@@ -179,7 +166,6 @@ class DocumentParser
                         [
                             'multiple' => $type instanceof Property ? $type->multiple : false,
                             'aliases' => $this->getAliases($child),
-//                            'proxyNamespace' => ProxyFactory::getProxyNamespace($child, true),
 //                            'namespace' => $child->getName(),
                         ]
                     );
@@ -203,12 +189,8 @@ class DocumentParser
             'Object',
             'Nested',
             'MultiField',
-            'Inherit',
-            'Skip',
-            'Suggester/CompletionSuggesterProperty',
-            'Suggester/ContextSuggesterProperty',
-            'Suggester/Context/CategoryContext',
-            'Suggester/Context/GeoLocationContext',
+//            'Inherit',
+//            'Skip',
         ];
 
         foreach ($annotations as $annotation) {
@@ -344,9 +326,11 @@ class DocumentParser
                 $maps['fields'] = $fieldsMap;
             }
 
-            // Suggestions.
-            if ($type instanceof AbstractSuggesterProperty) {
-                $this->getObjectMapping($type->objectName);
+            // Raw override.
+            if (isset($maps['raw'])) {
+                $raw = $maps['raw'];
+                unset($maps['raw']);
+                $maps = array_merge($maps, $raw);
             }
 
             $mapping[$type->name] = $maps;

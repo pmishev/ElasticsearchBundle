@@ -37,25 +37,20 @@ class SineflowElasticsearchExtension extends Extension
         $config = $this->processConfiguration($configuration, $configs);
         $this->removeAbstractIndices($config['indices']);
 
+        $container->setParameter('sfes.document_dir', $config['document_dir']);
+
         $loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__ . '/../Resources/config'));
         $loader->load('services.yml');
 
         $container->setParameter('sfes.connections', $config['connections']);
         $container->setParameter('sfes.indices', $config['indices']);
 
-        $this->addDocumentFinderDefinition($config, $container);
+//        $this->addDocumentFinderDefinition($config, $container);
         $this->addMetadataCollectorDefinition($config, $container);
         $this->addMetadataCollectionDefinition($config, $container);
         $this->addConnectionDefinitions($config, $container);
-
         $this->addDocumentsResource($config, $container);
-        $this->addDataCollectorDefinition($config, $container);
-//
-//        $this->addClassesToCompile(
-//            [
-//                'ONGR\ElasticsearchBundle\Mapping\Proxy\ProxyInterface',
-//            ]
-//        );
+        $this->addProfilerDefinition($config, $container);
     }
 
     /**
@@ -73,23 +68,23 @@ class SineflowElasticsearchExtension extends Extension
         }
     }
 
-    /**
-     * Adds DocumentFinder definition to container (ID: sfes.document_finder).
-     *
-     * @param array            $config
-     * @param ContainerBuilder $container
-     */
-    private function addDocumentFinderDefinition(array $config, ContainerBuilder $container)
-    {
-        $documentFinder = new Definition(
-            'Sineflow\ElasticsearchBundle\Mapping\DocumentFinder',
-            [
-                $container->getParameter('kernel.bundles'),
-            ]
-        );
-        $documentFinder->addMethodCall('setDocumentDir', [$config['document_dir']]);
-        $container->setDefinition('sfes.document_finder', $documentFinder);
-    }
+//    /**
+//     * Adds DocumentFinder definition to container (ID: sfes.document_finder).
+//     *
+//     * @param array            $config
+//     * @param ContainerBuilder $container
+//     */
+//    private function addDocumentFinderDefinition(array $config, ContainerBuilder $container)
+//    {
+//        $documentFinder = new Definition(
+//            'Sineflow\ElasticsearchBundle\Mapping\DocumentFinder',
+//            [
+//                $container->getParameter('kernel.bundles'),
+//            ]
+//        );
+//        $documentFinder->addMethodCall('setDocumentDir', [$config['document_dir']]);
+//        $container->setDefinition('sfes.document_finder', $documentFinder);
+//    }
 
     /**
      * Adds MetadataCollector definition to container (ID: sfes.metadata_collector).
@@ -115,14 +110,6 @@ class SineflowElasticsearchExtension extends Extension
                 new Reference('sfes.document_finder'),
             ]
         );
-
-//        $proxyLoader = new Definition(
-//            'Sineflow\ElasticsearchBundle\Mapping\Proxy\ProxyLoader',
-//            [
-//                $this->getCacheDir($container, 'proxies'),
-//                $container->getParameter('kernel.debug'),
-//            ]
-//        );
 
         $metadataCollector = new Definition(
             'Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector',
@@ -285,7 +272,7 @@ class SineflowElasticsearchExtension extends Extension
      * @param array            $config
      * @param ContainerBuilder $container
      */
-    private function addDataCollectorDefinition(array $config, ContainerBuilder $container)
+    private function addProfilerDefinition(array $config, ContainerBuilder $container)
     {
         if ($this->isDebugSet($config)) {
             $container->setDefinition('sfes.logger.trace', $this->getLogTraceDefinition());
@@ -321,7 +308,7 @@ class SineflowElasticsearchExtension extends Extension
      */
     private function getLogTraceDefinition()
     {
-        $handler = new Definition('Sineflow\ElasticsearchBundle\Logger\Handler\CollectionHandler', [new Reference('request_stack')]);
+        $handler = new Definition('Sineflow\ElasticsearchBundle\Profiler\Handler\CollectionHandler', [new Reference('request_stack')]);
 
         $logger = new Definition(
             'Monolog\Logger',
@@ -343,7 +330,7 @@ class SineflowElasticsearchExtension extends Extension
      */
     private function getDataCollectorDefinition($loggers = [])
     {
-        $collector = new Definition('Sineflow\ElasticsearchBundle\DataCollector\ElasticsearchDataCollector');
+        $collector = new Definition('Sineflow\ElasticsearchBundle\Profiler\ElasticsearchProfiler');
         $collector->addMethodCall('setIndexManagers', [new Parameter('sfes.indices')]);
 
         foreach ($loggers as $logger) {
