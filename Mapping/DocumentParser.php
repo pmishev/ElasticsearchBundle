@@ -110,6 +110,7 @@ class DocumentParser
                     ),
                     'aliases' => $this->getAliases($reflectionClass),
                     'objects' => $this->getObjects(),
+                    'repositoryClass' => $class->repositoryClass,
 //                    'proxyNamespace' => ProxyFactory::getProxyNamespace($reflectionClass, true),
                 // TODO: what do I need these for?
 //                    'namespace' => $reflectionClass->getName(),

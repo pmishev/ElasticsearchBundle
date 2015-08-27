@@ -152,6 +152,27 @@ class ElasticsearchDataCollector implements DataCollectorInterface
 
     private function addQuery($route, $record, $queryBody)
     {
+        $parsedUrl = array_merge(
+            [
+                'scheme' => '',
+                'host' => '',
+                'port' => '',
+                'path' => '',
+                'query' => '',
+            ],
+            parse_url($record['context']['uri'])
+        );
+        $senseRequest = $record['context']['method'].' '.$parsedUrl['path'];
+        if ($parsedUrl['query']) {
+            $senseRequest .= '?'.$parsedUrl['query'];
+        }
+        // TODO: check if the query body needs to be escaped or otherwise transformed
+        $senseRequest .= $queryBody;
+
+//        dump($senseRequest);
+
+
+        // Get individual query params
         parse_str(parse_url($record['context']['uri'], PHP_URL_QUERY), $httpParameters);
 
         $body = trim($queryBody, " '\r\t\n");
@@ -175,6 +196,7 @@ class ElasticsearchDataCollector implements DataCollectorInterface
                 'method' => $record['context']['method'],
                 'httpParameters' => $httpParameters,
                 'time' => $record['context']['duration'] * 100,
+                'senseRequest' => $senseRequest,
             ],
             array_diff_key(parse_url($record['context']['uri']), array_flip(['query']))
         );

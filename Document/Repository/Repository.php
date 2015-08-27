@@ -15,6 +15,8 @@ use ONGR\ElasticsearchBundle\Result\IndicesResult;
 use ONGR\ElasticsearchBundle\Result\RawResultIterator;
 use ONGR\ElasticsearchBundle\Result\RawResultScanIterator;
 use ONGR\ElasticsearchBundle\Result\Suggestion\SuggestionIterator;
+use Sineflow\ElasticsearchBundle\Manager\IndexManager;
+use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
 
 /**
  * Repository class.
@@ -27,19 +29,23 @@ class Repository implements RepositoryInterface
     const RESULTS_RAW_ITERATOR = 'raw_iterator';
 
     /**
-     * @var Manager
+     * @var IndexManager
      */
     private $manager;
 
     /**
-     * @var array
+     * The document class in short notation (e.g. AppBundle:Product)
+     *
+     * @var string
      */
-    private $namespaces = [];
+    private $documentClass;
 
     /**
-     * @var array
+     * The type metadata
+     *
+     * @var DocumentMetadata
      */
-    private $types = [];
+    private $metadata;
 
     /**
      * @var array
@@ -49,30 +55,20 @@ class Repository implements RepositoryInterface
     /**
      * Constructor.
      *
-     * @param Manager $manager
-     * @param array   $repositories
+     * @param IndexManager $manager
+     * @param string       $documentClass
      */
-    public function __construct($manager, $repositories)
+    public function __construct($manager, $documentClass)
     {
         $this->manager = $manager;
-        $this->namespaces = $repositories;
-        $this->types = $this->getTypes();
-    }
+        $this->documentClass = $documentClass;
 
-    /**
-     * @return array
-     * TODO: fix
-     */
-    public function getTypes()
-    {
-        $types = [];
-        $meta = $this->getManager()->getBundlesMapping($this->namespaces);
-
-        foreach ($meta as $namespace => $metadata) {
-            $types[] = $metadata->getType();
+        // Get the metadata of the document class managed by the repository
+        $metadata = $this->getManager()->getDocumentsMetadata([$documentClass]);
+        if (empty($metadata)) {
+            throw new \InvalidArgumentException(sprintf('Type "%s" is not managed by index "%s"', $documentClass, $manager->getManagerName()));
         }
-
-        return $types;
+        $this->metadata = $metadata[$documentClass];
     }
 
     /**
@@ -83,18 +79,13 @@ class Repository implements RepositoryInterface
      *
      * @return DocumentInterface|null
      *
-     * @throws \LogicException
      * TODO: fix
      */
     public function find($id, $resultType = self::RESULTS_OBJECT)
     {
-        if (count($this->types) !== 1) {
-            throw new \LogicException('Only one type must be specified for the find() method');
-        }
-
         $params = [
-            'index' => $this->getManager()->getConnection()->getIndexName(),
-            'type' => $this->types[0],
+            'index' => $this->getManager()->getReadAlias(),
+            'type' => $this->metadata->getType(),
             'id' => $id,
         ];
 
@@ -124,6 +115,8 @@ class Repository implements RepositoryInterface
      * @param string     $resultType Result type returned.
      *
      * @return array|DocumentIterator The objects.
+     *
+     * TODO: check if working
      */
     public function findBy(
         array $criteria,
@@ -214,6 +207,9 @@ class Repository implements RepositoryInterface
      * @return DocumentIterator|DocumentScanIterator|RawResultIterator|array
      *
      * @throws \Exception
+     *
+     * TODO: check if working
+s     *
      */
     public function execute(Search $search, $resultsType = self::RESULTS_OBJECT)
     {
@@ -231,6 +227,9 @@ class Repository implements RepositoryInterface
      * @param Search $search
      *
      * @return array
+     *
+     * TODO: check if working
+     *
      */
     public function deleteByQuery(Search $search)
     {
@@ -252,12 +251,14 @@ class Repository implements RepositoryInterface
      * @return array|DocumentScanIterator
      *
      * @throws \Exception
+     *
+     * TODO: check if working
      */
     public function scan(
         $scrollId,
         $scrollDuration = '5m',
-        $resultsType = self::RESULTS_OBJECT
-    ) {
+        $resultsType = self::RESULTS_OBJECT)
+    {
         $results = $this->getManager()->getConnection()->scroll($scrollId, $scrollDuration);
 
         return $this->parseResult($results, $resultsType, $scrollDuration);
@@ -269,6 +270,8 @@ class Repository implements RepositoryInterface
      * @param AbstractSuggester[]|AbstractSuggester $suggesters
      *
      * @return SuggestionIterator
+     *
+     * TODO: check if working
      */
     public function suggest($suggesters)
     {
@@ -295,6 +298,8 @@ class Repository implements RepositoryInterface
      * @return array
      *
      * @throws \LogicException
+     *
+     * TODO: fix
      */
     public function remove($id)
     {
@@ -330,7 +335,7 @@ class Repository implements RepositoryInterface
 
         // Checks if cache is loaded.
         if (empty($this->fieldsCache)) {
-            foreach ($this->getManager()->getBundlesMapping($this->namespaces) as $ns => $properties) {
+            foreach ($this->getManager()->getBundlesMapping($this->documentClasses) as $ns => $properties) {
                 $this->fieldsCache = array_unique(
                     array_merge(
                         $this->fieldsCache,
@@ -450,13 +455,13 @@ class Repository implements RepositoryInterface
      */
     public function createDocument()
     {
-        if (count($this->namespaces) > 1) {
+        if (count($this->documentClasses) > 1) {
             throw new \LogicException(
-                'Repository can not create new document when it is associated with multiple namespaces'
+                'Repository can not create new document when it is associated with multiple documentClasses'
             );
         }
 
-        $class = $this->getManager()->getBundlesMapping()[reset($this->namespaces)]->getProxyNamespace();
+        $class = $this->getManager()->getBundlesMapping()[reset($this->documentClasses)]->getProxyNamespace();
 
         return new $class();
     }
@@ -464,7 +469,7 @@ class Repository implements RepositoryInterface
     /**
      * Returns elasticsearch manager used in this repository for getting/setting documents.
      *
-     * @return Manager
+     * @return IndexManager
      */
     public function getManager()
     {

@@ -55,24 +55,21 @@ class DocumentMetadataCollection
     }
 
     /**
-     * Returns the document classes names (in short notation, i.e. AppBundle:Product) for an index
+     * Returns the metadata of the documents within the specified index
      *
      * @param string $indexManagerName
-     * @return array
-     * @throws \HttpInvalidParamException
-     *
-     * TODO: maybe rename this to getMetadataForIndex
+     * @return DocumentMetadata[]
+     * @throws \InvalidArgumentException
      */
-    public function getDocumentClassesForIndex($indexManagerName)
+    public function getDocumentsMetadataForIndex($indexManagerName)
     {
         if (!isset($this->metadata[$indexManagerName])) {
-            throw new \HttpInvalidParamException(sprintf('No metadata found for index "%s"', $indexManagerName));
+            throw new \InvalidArgumentException(sprintf('No metadata found for index "%s"', $indexManagerName));
         }
 
         $indexMetadata = $this->metadata[$indexManagerName];
-        $documentClasses = array_keys($indexMetadata);
 
-        return $documentClasses;
+        return $indexMetadata;
     }
 
     /**
@@ -119,6 +116,7 @@ class DocumentMetadataCollection
 
         foreach ($this->metadata as $index => $types) {
             foreach ($types as $typeDocumentClass => $documentMetadata) {
+                /** @var DocumentMetadata $documentMetadata */
                 $result[$documentMetadata->getType()] = $typeDocumentClass;
             }
         }
@@ -126,36 +124,4 @@ class DocumentMetadataCollection
         return $result;
     }
 
-// TODO: Review the necessity of methods below
-
-//    /**
-//     * Return a list of type namespaces
-//     *
-//     * @return array
-//     */
-//    public function getTypes()
-//    {
-//        return array_keys($this->metadata);
-//    }
-
-
-
-    /**
-     * Returns metadata.
-     *
-     * @param array $repositories
-     *
-     * @return DocumentMetadata[]
-     *
-     * TODO: $repositories should be renamed to $documentClasses
-     * TODO: now metadata is first indexed by indices
-     */
-    public function getMetadata($repositories = [])
-    {
-        if (!empty($repositories)) {
-            return array_intersect_key($this->metadata, array_flip($repositories));
-        }
-
-        return $this->metadata;
-    }
 }

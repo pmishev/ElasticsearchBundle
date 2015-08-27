@@ -43,7 +43,6 @@ class SineflowElasticsearchExtension extends Extension
         $container->setParameter('sfes.connections', $config['connections']);
         $container->setParameter('sfes.indices', $config['indices']);
 
-        // TODO: uncomment when needed
         $this->addDocumentFinderDefinition($config, $container);
         $this->addMetadataCollectorDefinition($config, $container);
         $this->addMetadataCollectionDefinition($config, $container);

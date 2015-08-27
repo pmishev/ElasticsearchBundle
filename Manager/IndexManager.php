@@ -6,6 +6,7 @@ use Sineflow\ElasticsearchBundle\Document\DocumentInterface;
 use Sineflow\ElasticsearchBundle\Document\Provider\ProviderInterface;
 use Sineflow\ElasticsearchBundle\Document\Provider\ProviderRegistry;
 use Sineflow\ElasticsearchBundle\Document\Repository\Repository;
+use Sineflow\ElasticsearchBundle\Document\Repository\RepositoryInterface;
 use Sineflow\ElasticsearchBundle\Event\ElasticsearchCommitEvent;
 use Sineflow\ElasticsearchBundle\Event\ElasticsearchPersistEvent;
 use Sineflow\ElasticsearchBundle\Event\Events;
@@ -59,6 +60,11 @@ class IndexManager
     private $eventDispatcher;
 
     /**
+     * @var RepositoryInterface[]
+     */
+    private $repositories = [];
+
+    /**
      * @var bool Whether to use index aliases
      */
     private $useAliases = true;
@@ -97,6 +103,14 @@ class IndexManager
             $this->readAlias = $indexSettings['index'];
             $this->writeAlias = $indexSettings['index'] . '_write';
         }
+    }
+
+    /**
+     * @return string
+     */
+    public function getManagerName()
+    {
+        return $this->managerName;
     }
 
     /**
@@ -158,47 +172,39 @@ class IndexManager
     }
 
     /**
-     * Returns repository with one or several active selected types.
+     * Returns repository for a document class
      *
      * TODO: instead of creating a new repository object every time, the repository class should be defined in the entity annotation
      * TODO: Make sure the returned repository implements RepositoryInterface
      *
-     * @param string|string[] $type
+     * @param string $documentClass
      *
      * @return Repository
      */
-    public function getRepository($type)
+    public function getRepository($documentClass)
     {
-        $type = is_array($type) ? $type : [$type];
-
-        foreach ($type as &$selectedType) {
-            $this->checkRepositoryType($selectedType);
+        if (isset($this->repositories[$documentClass])) {
+            return $this->repositories[$documentClass];
         }
 
-        return $this->createRepository($type);
+        $customRepositoryClass = $this->metadataCollection->getDocumentMetadata($documentClass)->getRepositoryClass();
+
+        if ($customRepositoryClass) {
+            return new $customRepositoryClass($this, $documentClass);
+        } else {
+            return new Repository($this, $documentClass);
+        }
     }
 
     /**
-     * Creates a repository.
+     * Returns the data provider object for a type (provided in short class notation, e.g AppBundle:Product)
      *
-     * @param array $types
-     *
-     * @return Repository
-     */
-    private function createRepository(array $types)
-    {
-        return new Repository($this, $types);
-    }
-
-    /**
-     * Returns the data provider object for a type
-     *
-     * @param string $type The type document class
+     * @param string $documentClass The document class for the type
      * @return ProviderInterface
      */
-    public function getDataProvider($type)
+    public function getDataProvider($documentClass)
     {
-        $provider = $this->providerRegistry->getProviderInstance($type);
+        $provider = $this->providerRegistry->getProviderInstance($documentClass);
 
         return $provider;
     }
@@ -464,13 +470,16 @@ class IndexManager
         $originalWriteAlias = $this->writeAlias;
         $this->setWriteAlias($settings['index']);
 
-        // Cycle all types for the index
-        foreach ($this->metadataCollection->getDocumentClassesForIndex($this->managerName) as $documentClass) {
+        // Get and cycle all types for the index
+        $indexDocumentsMetadata = $this->metadataCollection->getDocumentsMetadataForIndex($this->managerName);
+        $documentClasses = array_keys($indexDocumentsMetadata);
+        foreach ($documentClasses as $documentClass) {
             $typeDataProvider = $this->getDataProvider($documentClass);
             $i = 1;
             foreach ($typeDataProvider->getDocuments() as $document) {
                 if (is_array($document)) {
-                    $this->persistRaw($this->metadataCollection->getDocumentMetadata($documentClass)->getType(), $document);
+                    $documentMetadata = $indexDocumentsMetadata[$documentClass];
+                    $this->persistRaw($documentMetadata->getType(), $document);
                 } else {
                     $this->persist($document);
                 }
@@ -576,6 +585,26 @@ class IndexManager
         );
     }
 
+    /**
+     * Return the metadata for documents for this index,
+     * optionally filtered by specific document classes in short notation (e.g. AppBundle:Product)
+     *
+     * @param array $documentClasses If given, only metadata for those classes will be returned
+     * @return DocumentMetadata[]
+     *
+     * TODO: this was getBundlesMapping() before
+     */
+    public function getDocumentsMetadata(array $documentClasses = [])
+    {
+        $metadata = $this->metadataCollection->getDocumentsMetadataForIndex($this->managerName);
+
+        if (!empty($documentClasses)) {
+            return array_intersect_key($metadata, array_flip($documentClasses));
+        }
+
+        return $metadata;
+    }
+
 //    /**
 //     * Returns repository metadata for document.
 //     *
@@ -594,20 +623,6 @@ class IndexManager
 //
 //        return null;
 //    }
-
-    /**
-     * Returns bundles mapping.
-     *
-     * @param array $repositories
-     *
-     * TODO: rename to getTypesMapping and return only the type mappings for this index
-     *
-     * @return DocumentMetadata[]
-     */
-    public function getBundlesMapping($repositories = [])
-    {
-        return $this->metadataCollection->getMetadata($repositories);
-    }
 //
 //    /**
 //     * @return array
@@ -615,32 +630,6 @@ class IndexManager
 //    public function getTypesMapping()
 //    {
 //        return $this->metadataCollection->getTypesMap();
-//    }
-
-//    /**
-//     * Checks if specified repository and type is defined, throws exception otherwise.
-//     *
-//     * @param string $type
-//     *
-//     * @throws \InvalidArgumentException
-//     */
-//    private function checkRepositoryType(&$type)
-//    {
-//        $mapping = $this->getBundlesMapping();
-//
-//        if (array_key_exists($type, $mapping)) {
-//            return;
-//        }
-//
-//        if (array_key_exists($type . 'Document', $mapping)) {
-//            $type .= 'Document';
-//
-//            return;
-//        }
-//
-//        $exceptionMessage = "Undefined repository `{$type}`, valid repositories are: `" .
-//            join('`, `', array_keys($this->getBundlesMapping())) . '`.';
-//        throw new \InvalidArgumentException($exceptionMessage);
 //    }
 
     /**
