@@ -45,12 +45,9 @@ class SineflowElasticsearchExtension extends Extension
         $container->setParameter('sfes.connections', $config['connections']);
         $container->setParameter('sfes.indices', $config['indices']);
 
-//        $this->addDocumentFinderDefinition($config, $container);
-        $this->addMetadataCollectorDefinition($config, $container);
         $this->addMetadataCollectionDefinition($config, $container);
         $this->addConnectionDefinitions($config, $container);
         $this->addDocumentsResource($config, $container);
-        $this->addProfilerDefinition($config, $container);
     }
 
     /**
@@ -68,63 +65,8 @@ class SineflowElasticsearchExtension extends Extension
         }
     }
 
-//    /**
-//     * Adds DocumentFinder definition to container (ID: sfes.document_finder).
-//     *
-//     * @param array            $config
-//     * @param ContainerBuilder $container
-//     */
-//    private function addDocumentFinderDefinition(array $config, ContainerBuilder $container)
-//    {
-//        $documentFinder = new Definition(
-//            'Sineflow\ElasticsearchBundle\Mapping\DocumentFinder',
-//            [
-//                $container->getParameter('kernel.bundles'),
-//            ]
-//        );
-//        $documentFinder->addMethodCall('setDocumentDir', [$config['document_dir']]);
-//        $container->setDefinition('sfes.document_finder', $documentFinder);
-//    }
-
-    /**
-     * Adds MetadataCollector definition to container (ID: sfes.metadata_collector).
-     *
-     * @param array            $config
-     * @param ContainerBuilder $container
-     */
-    private function addMetadataCollectorDefinition(array $config, ContainerBuilder $container)
-    {
-        $cachedReader = new Definition(
-            'Doctrine\Common\Annotations\FileCacheReader',
-            [
-                new Definition('Doctrine\Common\Annotations\AnnotationReader'),
-                $this->getCacheDir($container, 'annotations'),
-                $container->getParameter('kernel.debug'),
-            ]
-        );
-
-        $documentParser = new Definition(
-            'Sineflow\ElasticsearchBundle\Mapping\DocumentParser',
-            [
-                $cachedReader,
-                new Reference('sfes.document_finder'),
-            ]
-        );
-
-        $metadataCollector = new Definition(
-            'Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector',
-            [
-                new Reference('sfes.document_finder'),
-                $documentParser,
-            ]
-        );
-        $container->setDefinition('sfes.document_metadata_collector', $metadataCollector);
-    }
-
     private function addMetadataCollectionDefinition(array $config, ContainerBuilder $container)
     {
-        // TODO: Add check to make sure that a document entity is not managed by more than one index!!!
-
         $documentsMetadataDefinitions = [];
         $indices = $config['indices'];
 
@@ -266,98 +208,4 @@ class SineflowElasticsearchExtension extends Extension
         }
     }
 
-    /**
-     * Adds data collector to container
-     *
-     * @param array            $config
-     * @param ContainerBuilder $container
-     */
-    private function addProfilerDefinition(array $config, ContainerBuilder $container)
-    {
-        if ($this->isDebugSet($config)) {
-            $container->setDefinition('sfes.logger.trace', $this->getLogTraceDefinition());
-            $container->setDefinition('sfes.collector', $this->getDataCollectorDefinition(['sfes.logger.trace']));
-        }
-    }
-
-    /**
-     * Finds out if debug is set to any manager.
-     *
-     * @param array $config
-     *
-     * @return bool
-     */
-    private function isDebugSet(array $config)
-    {
-        // TODO: Do I want to have a debug setting at all or maybe set this depending on if the symfony profiler is enabled
-        return true;
-
-//        foreach ($config['managers'] as $manager) {
-//            if ($manager['debug']['enabled'] === true) {
-//                return true;
-//            }
-//        }
-//
-//        return false;
-    }
-
-    /**
-     * Returns logger used for collecting data.
-     *
-     * @return Definition
-     */
-    private function getLogTraceDefinition()
-    {
-        $handler = new Definition('Sineflow\ElasticsearchBundle\Profiler\Handler\CollectionHandler', [new Reference('request_stack')]);
-
-        $logger = new Definition(
-            'Monolog\Logger',
-            [
-                'tracer',
-                [$handler],
-            ]
-        );
-
-        return $logger;
-    }
-
-    /**
-     * Returns elasticsearch data collector definition.
-     *
-     * @param array $loggers
-     *
-     * @return Definition
-     */
-    private function getDataCollectorDefinition($loggers = [])
-    {
-        $collector = new Definition('Sineflow\ElasticsearchBundle\Profiler\ElasticsearchProfiler');
-        $collector->addMethodCall('setIndexManagers', [new Parameter('sfes.indices')]);
-
-        foreach ($loggers as $logger) {
-            $collector->addMethodCall('addLogger', [new Reference($logger)]);
-        }
-
-        $collector->addTag(
-            'data_collector',
-            [
-                'template' => 'SineflowElasticsearchBundle:Profiler:profiler.html.twig',
-                'id' => 'sfes',
-            ]
-        );
-
-        return $collector;
-    }
-
-    /**
-     * Returns cache directory.
-     *
-     * @param ContainerBuilder $container
-     * @param string           $dir
-     *
-     * @return string
-     */
-    private function getCacheDir(ContainerBuilder $container, $dir = '')
-    {
-        return $container->getParameter('kernel.cache_dir') . DIRECTORY_SEPARATOR . 'sineflow' . DIRECTORY_SEPARATOR . $dir;
-    }
 }

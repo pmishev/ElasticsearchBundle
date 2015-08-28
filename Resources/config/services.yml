@@ -5,10 +5,19 @@ parameters:
 #    sfes.export.class: ONGR\ElasticsearchBundle\Service\ExportService
 #    sfes.import.class: ONGR\ElasticsearchBundle\Service\ImportService
     sfes.document_finder.class: Sineflow\ElasticsearchBundle\Mapping\DocumentFinder
-    sfes.doctrine.filesystem_cache.class: Doctrine\Common\Cache\FilesystemCache
     sfes.document_parser.class: Sineflow\ElasticsearchBundle\Mapping\DocumentParser
+    sfes.document_metadata_collector.class: Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector
+    sfes.logger.collection_handler.class: Sineflow\ElasticsearchBundle\Profiler\Handler\CollectionHandler
+    sfes.profiler.class: Sineflow\ElasticsearchBundle\Profiler\ElasticsearchProfiler
+    sfes.profiler.template: SineflowElasticsearchBundle:Profiler:profiler.html.twig
 
 services:
+#    sfes.export:
+#        class: %sfes.export.class%
+#
+#    sfes.import:
+#        class: %sfes.import.class%
+
     sfes.provider_registry:
         class: %sfes.provider_registry.class%
         calls:
@@ -19,72 +28,50 @@ services:
         calls:
             - [setContainer, ["@service_container"]]
 
-#    sfes.export:
-#        class: %sfes.export.class%
-#
-#    sfes.import:
-#        class: %sfes.import.class%
-
     sfes.document_finder:
         class: %sfes.document_finder.class%
         arguments: [%kernel.bundles%]
         calls:
             - [setDocumentDir, ["%sfes.document_dir%"]]
-        public: false # TODO: shouldn't this be public?
 
-#    sfes.cache_engine:
-#        class: %sfes.doctrine.filesystem_cache.class%
-#        arguments: ["%kernel.cache_dir%/sineflow", ".sineflow.data"]
-#
-#    annotations.cached_reader:
-#        class: %annotations.cached_reader.class%
-#        arguments: [@annotations.reader, @sfes.cache_engine, %kernel.debug%]
-#        public: false # TODO: in ongr, it is public, but why?
-#
-#    sfes.document_parser:
-#        class: %sfes.document_parser.class%
-#        arguments: [@annotations.cached_reader, @sfes.document_finder]
-#        public: false
-#
-#    sfes.document_metadata_collector:
-#        class: %sfes.metadata_collector.class%
-#        arguments: [@sfes.document_finder, @sfes.document_parser]
+    sfes.cache_engine:
+        class: %doctrine_cache.file_system.class%
+        arguments: ["%kernel.cache_dir%/sineflow", ".sineflow.data"]
+        public: false
 
+    sfes.annotations.reader:
+        class: %annotations.reader.class%
+        public: false
 
-#
-#
-#parameters:
-#    es.metadata_collector.class: ONGR\ElasticsearchBundle\Mapping\MetadataCollector
-#    es.logger.collection_handler.class: ONGR\ElasticsearchBundle\Profiler\Handler\CollectionHandler
-#    es.profiler.class: ONGR\ElasticsearchBundle\Profiler\ElasticsearchProfiler
-#    es.metadata_cache.class: ONGR\ElasticsearchBundle\Mapping\MetadataCache
-#
-#    es.profiler.template: ONGRElasticsearchBundle:Profiler:profiler.html.twig
-#
-#services:
-##    es.export:
-##        class: %es.export.class%
-##
-##    es.import:
-##        class: %es.import.class%
-#
-#    es.logger.collection_handler:
-#        class: %es.logger.collection_handler.class%
-#        public: false
-#
-#    es.logger.ongr:
-#        class: %monolog.logger.class%
-#        arguments: ['ongr']
-#        calls:
-#            - [pushHandler, [@es.logger.collection_handler]]
-#
-#    es.metadata_cache:
-#        class: %es.metadata_cache.class%
-#
-#    es.profiler:
-#        class: %es.profiler.class%
-#        calls:
-#            - [setManagers, [%es.managers%]]
-#            - [addLogger, [@es.logger.ongr]]
-#        tags:
-#            - {name: data_collector, template: %es.profiler.template%, id: ongr}
+    sfes.annotations.cached_reader:
+        class: %annotations.cached_reader.class%
+        arguments: [@sfes.annotations.reader, @sfes.cache_engine, %kernel.debug%]
+        public: false
+
+    sfes.document_parser:
+        class: %sfes.document_parser.class%
+        arguments: [@sfes.annotations.cached_reader, @sfes.document_finder]
+        public: false
+
+    sfes.document_metadata_collector:
+        class: %sfes.document_metadata_collector.class%
+        arguments: [@sfes.document_finder, @sfes.document_parser]
+
+    sfes.logger.collection_handler:
+        class: %sfes.logger.collection_handler.class%
+        arguments: [@request_stack]
+        public: false
+
+    sfes.logger.trace:
+        class: %monolog.logger.class%
+        arguments: ['trace']
+        calls:
+            - [pushHandler, [@sfes.logger.collection_handler]]
+
+    sfes.profiler:
+        class: %sfes.profiler.class%
+        calls:
+            - [setIndexManagers, [%sfes.indices%]]
+            - [addLogger, [@sfes.logger.trace]]
+        tags:
+            - {name: data_collector, template: %sfes.profiler.template%, id: sfes}

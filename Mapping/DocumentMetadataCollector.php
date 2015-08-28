@@ -28,7 +28,7 @@ class DocumentMetadataCollector
      * @param DocumentFinder $finder For finding documents.
      * @param DocumentParser $parser For reading document annotations.
      */
-    public function __construct($finder, $parser)
+    public function __construct(DocumentFinder $finder, DocumentParser $parser)
     {
         $this->finder = $finder;
         $this->parser = $parser;
