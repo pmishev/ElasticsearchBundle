@@ -125,6 +125,7 @@ class SineflowElasticsearchExtension extends Extension
             $connectionDefinition = new Definition(
                 'Sineflow\ElasticsearchBundle\Manager\ConnectionManager',
                 [
+                    $connectionName,
                     $client,
                     $connectionSettings,
                 ]

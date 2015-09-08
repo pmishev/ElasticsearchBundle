@@ -56,6 +56,22 @@ class DocumentMetadataCollection
     }
 
     /**
+     * Returns the index manager name that manages the given entity document class
+     *
+     * @param string $documentClass
+     * @return string
+     */
+    public function getDocumentClassIndex($documentClass)
+    {
+        $indices = $this->getDocumentClassesIndices();
+        if (!isset($indices[$documentClass])) {
+            throw new \InvalidArgumentException(sprintf('Entity "%s" is not managed by any index manager', $documentClass));
+        }
+
+        return $indices[$documentClass];
+    }
+
+    /**
      * Returns the metadata of the documents within the specified index
      *
      * @param string $indexManagerName

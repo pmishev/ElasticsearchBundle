@@ -1,6 +1,7 @@
 parameters:
     sfes.provider_registry.class: Sineflow\ElasticsearchBundle\Document\Provider\ProviderRegistry
     sfes.index_manager_factory.class: Sineflow\ElasticsearchBundle\Manager\IndexManagerFactory
+    sfes.finder.class: Sineflow\ElasticsearchBundle\Finder\Finder
 #    sfes.logging.path: %kernel.logs_dir%/elasticsearch_%kernel.environment%.log
 #    sfes.export.class: ONGR\ElasticsearchBundle\Service\ExportService
 #    sfes.import.class: ONGR\ElasticsearchBundle\Service\ImportService
@@ -27,6 +28,10 @@ services:
         class: %sfes.index_manager_factory.class%
         calls:
             - [setContainer, ["@service_container"]]
+
+    sfes.finder:
+        class: %sfes.finder.class%
+        arguments: [@sfes.document_metadata_collection, @sfes.index_manager_factory]
 
     sfes.document_locator:
         class: %sfes.document_locator.class%

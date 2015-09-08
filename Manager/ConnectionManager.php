@@ -11,6 +11,11 @@ use Elasticsearch\Common\Exceptions\Forbidden403Exception;
 class ConnectionManager
 {
     /**
+     * @var string The unique connection manager name (the key from the index configuration)
+     */
+    private $connectionName;
+
+    /**
      * @var Client
      */
     private $client;
@@ -33,15 +38,25 @@ class ConnectionManager
     /**
      * Construct.
      *
+     * @param string $connectionName     The unique connection name
      * @param Client $client             Elasticsearch client.
      * @param array  $connectionSettings Settings array.
      */
-    public function __construct(Client $client, $connectionSettings)
+    public function __construct($connectionName, Client $client, $connectionSettings)
     {
+        $this->connectionName = $connectionName;
         $this->client = $client;
         $this->connectionSettings = $connectionSettings;
         $this->bulkQueries = [];
         $this->bulkParams = [];
+    }
+
+    /**
+     * @return string
+     */
+    public function getConnectionName()
+    {
+        return $this->connectionName;
     }
 
     /**
