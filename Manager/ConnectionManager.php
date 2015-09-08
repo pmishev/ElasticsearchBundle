@@ -4,7 +4,6 @@ namespace Sineflow\ElasticsearchBundle\Manager;
 
 use Elasticsearch\Client;
 use Elasticsearch\Common\Exceptions\Forbidden403Exception;
-use Sineflow\ElasticsearchBundle\Mapping\MappingTool;
 
 /**
  * This class interacts with elasticsearch using injected client.
@@ -37,7 +36,7 @@ class ConnectionManager
      * @param Client $client             Elasticsearch client.
      * @param array  $connectionSettings Settings array.
      */
-    public function __construct($client, $connectionSettings)
+    public function __construct(Client $client, $connectionSettings)
     {
         $this->client = $client;
         $this->connectionSettings = $connectionSettings;

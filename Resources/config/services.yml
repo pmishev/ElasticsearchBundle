@@ -4,7 +4,7 @@ parameters:
 #    sfes.logging.path: %kernel.logs_dir%/elasticsearch_%kernel.environment%.log
 #    sfes.export.class: ONGR\ElasticsearchBundle\Service\ExportService
 #    sfes.import.class: ONGR\ElasticsearchBundle\Service\ImportService
-    sfes.document_finder.class: Sineflow\ElasticsearchBundle\Mapping\DocumentFinder
+    sfes.document_locator.class: Sineflow\ElasticsearchBundle\Mapping\DocumentLocator
     sfes.document_parser.class: Sineflow\ElasticsearchBundle\Mapping\DocumentParser
     sfes.document_metadata_collector.class: Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector
     sfes.logger.collection_handler.class: Sineflow\ElasticsearchBundle\Profiler\Handler\CollectionHandler
@@ -28,8 +28,8 @@ services:
         calls:
             - [setContainer, ["@service_container"]]
 
-    sfes.document_finder:
-        class: %sfes.document_finder.class%
+    sfes.document_locator:
+        class: %sfes.document_locator.class%
         arguments: [%kernel.bundles%]
         calls:
             - [setDocumentDir, ["%sfes.document_dir%"]]
@@ -50,12 +50,12 @@ services:
 
     sfes.document_parser:
         class: %sfes.document_parser.class%
-        arguments: [@sfes.annotations.cached_reader, @sfes.document_finder]
+        arguments: [@sfes.annotations.cached_reader, @sfes.document_locator]
         public: false
 
     sfes.document_metadata_collector:
         class: %sfes.document_metadata_collector.class%
-        arguments: [@sfes.document_finder, @sfes.document_parser]
+        arguments: [@sfes.document_locator, @sfes.document_parser]
 
     sfes.logger.collection_handler:
         class: %sfes.logger.collection_handler.class%

@@ -12,15 +12,16 @@ class DocumentMetadataCollection
      *      <type_class_short_name> => DocumentMetadata
      *      ...
      * ]
-
+     * ...
+     *
      * @var array
      */
     private $metadata;
 
     /**
-     * @var DocumentFinder
+     * @var DocumentLocator
      */
-    private $finder;
+    private $documentLocator;
 
     /**
      * @var array Mappings of ES type names to their managing document classes
@@ -28,12 +29,12 @@ class DocumentMetadataCollection
     private $typeToClassMap = [];
 
     /**
-     * @param DocumentFinder $finder
-     * @param array          $metadata
+     * @param DocumentLocator $documentLocator
+     * @param array           $metadata
      */
-    public function __construct(DocumentFinder $finder, array $metadata)
+    public function __construct(DocumentLocator $documentLocator, array $metadata)
     {
-        $this->finder = $finder;
+        $this->documentLocator = $documentLocator;
         $this->metadata = $metadata;
     }
 
@@ -80,7 +81,7 @@ class DocumentMetadataCollection
      */
     public function getDocumentMetadata($documentClass)
     {
-        $documentClass = $this->finder->getShortClassName($documentClass);
+        $documentClass = $this->documentLocator->getShortClassName($documentClass);
         foreach ($this->metadata as $index => $types) {
             foreach ($types as $typeDocumentClass => $documentMetadata) {
                 if ($documentClass === $typeDocumentClass) {

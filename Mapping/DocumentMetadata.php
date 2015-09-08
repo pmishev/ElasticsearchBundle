@@ -41,7 +41,7 @@ class DocumentMetadata
     protected function configureOptions(OptionsResolver $optionsResolver)
     {
 //        $optionsResolver->setRequired(['properties', 'fields', 'aliases', 'class', 'objects']);
-        $optionsResolver->setRequired(['properties', 'fields', 'aliases', 'objects', 'repositoryClass']);
+        $optionsResolver->setRequired(['properties', 'fields', 'aliases', 'objects', 'repositoryClass', 'className']);
     }
 
     /**
@@ -84,13 +84,13 @@ class DocumentMetadata
         return $this->metadata['repositoryClass'];
     }
 
-//    /**
-//     * @return string
-//     */
-//    public function getClassName()
-//    {
-//        return $this->metadata['class'];
-//    }
+    /**
+     * @return string
+     */
+    public function getClassName()
+    {
+        return $this->metadata['className'];
+    }
 
     /**
      * @return string

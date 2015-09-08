@@ -3,9 +3,9 @@
 namespace Sineflow\ElasticsearchBundle\Mapping;
 
 /**
- * Finds ES documents in bundles.
+ * Finds ES document classes in bundles.
  */
-class DocumentFinder
+class DocumentLocator
 {
     /**
      * @var array All bundles available in the application
@@ -76,24 +76,6 @@ class DocumentFinder
         }
 
         return $className;
-    }
-
-    /**
-     * Returns bundle document paths.
-     *
-     * TODO: remove this method, as we don't need to get all documents defined in a bundle - they must be explicitly defined for each index manager
-     * @param string $bundle
-     * @return array
-     */
-    public function getBundleDocumentPaths($bundle)
-    {
-        $bundleReflection = new \ReflectionClass($this->getBundleClass($bundle));
-
-        return glob(
-            dirname($bundleReflection->getFileName()) .
-            DIRECTORY_SEPARATOR . str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $this->getDocumentDir()) .
-            DIRECTORY_SEPARATOR . '*.php'
-        );
     }
 
     /**

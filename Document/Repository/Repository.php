@@ -8,13 +8,12 @@ use ONGR\ElasticsearchDSL\Query\TermsQuery;
 use ONGR\ElasticsearchDSL\Search;
 use ONGR\ElasticsearchDSL\Sort\FieldSort;
 use ONGR\ElasticsearchDSL\Sort\Sort;
-use ONGR\ElasticsearchBundle\Result\Converter;
-use ONGR\ElasticsearchBundle\Result\DocumentIterator;
-use ONGR\ElasticsearchBundle\Result\DocumentScanIterator;
-use ONGR\ElasticsearchBundle\Result\IndicesResult;
-use ONGR\ElasticsearchBundle\Result\RawResultIterator;
-use ONGR\ElasticsearchBundle\Result\RawResultScanIterator;
-use ONGR\ElasticsearchBundle\Result\Suggestion\SuggestionIterator;
+use Sineflow\ElasticsearchBundle\Result\Converter;
+use Sineflow\ElasticsearchBundle\Result\DocumentIterator;
+use Sineflow\ElasticsearchBundle\Result\DocumentScanIterator;
+use Sineflow\ElasticsearchBundle\Result\IndicesResult;
+use Sineflow\ElasticsearchBundle\Result\RawResultIterator;
+use Sineflow\ElasticsearchBundle\Result\RawResultScanIterator;
 use Sineflow\ElasticsearchBundle\Manager\IndexManager;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
 
@@ -78,8 +77,6 @@ class Repository implements RepositoryInterface
      * @param string $resultType Result type returned.
      *
      * @return DocumentInterface|null
-     *
-     * TODO: fix
      */
     public function find($id, $resultType = self::RESULTS_OBJECT)
     {
@@ -97,8 +94,7 @@ class Repository implements RepositoryInterface
 
         if ($resultType === self::RESULTS_OBJECT) {
             return (new Converter(
-                $this->getManager()->getTypesMapping(),
-                $this->getManager()->getBundlesMapping()
+                $this->metadata
             ))->convertToDocument($result);
         }
 
@@ -108,11 +104,11 @@ class Repository implements RepositoryInterface
     /**
      * Finds entities by a set of criteria.
      *
-     * @param array      $criteria   Example: ['group' => ['best', 'worst'], 'job' => 'medic'].
-     * @param array|null $orderBy    Example: ['name' => 'ASC', 'surname' => 'DESC'].
-     * @param int|null   $limit      Example: 5.
-     * @param int|null   $offset     Example: 30.
-     * @param string     $resultType Result type returned.
+     * @param array    $criteria   Example: ['group' => ['best', 'worst'], 'job' => 'medic'].
+     * @param array    $orderBy    Example: ['name' => 'ASC', 'surname' => 'DESC'].
+     * @param int|null $limit      Example: 5.
+     * @param int|null $offset     Example: 30.
+     * @param string   $resultType Result type returned.
      *
      * @return array|DocumentIterator The objects.
      *
@@ -123,8 +119,8 @@ class Repository implements RepositoryInterface
         array $orderBy = [],
         $limit = null,
         $offset = null,
-        $resultType = self::RESULTS_OBJECT
-    ) {
+        $resultType = self::RESULTS_OBJECT)
+    {
         $search = $this->createSearch();
 
         if ($limit !== null) {
@@ -209,7 +205,7 @@ class Repository implements RepositoryInterface
      * @throws \Exception
      *
      * TODO: check if working
-s     *
+     *
      */
     public function execute(Search $search, $resultsType = self::RESULTS_OBJECT)
     {
@@ -420,7 +416,7 @@ s     *
     }
 
     /**
-     * Returns elasticsearch manager used in this repository for getting/setting documents.
+     * Returns elasticsearch manager used in the repository.
      *
      * @return IndexManager
      */
