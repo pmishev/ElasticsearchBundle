@@ -133,9 +133,8 @@ class Converter
     public function convertToArray($object, $aliases = [])
     {
         if (empty($aliases)) {
-            $aliases = $this->getAlias($object);
             // TODO: Should I have metadata for nested objects in the metadatacollection? Should I pass the entire collection to the converter?
-//            $this->documentMetadata->getAliases();
+            $aliases = $this->documentMetadata->getAliases();
         }
 
         $array = [];

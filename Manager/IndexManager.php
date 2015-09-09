@@ -13,6 +13,7 @@ use Sineflow\ElasticsearchBundle\Event\Events;
 use Sineflow\ElasticsearchBundle\Exception\Exception;
 use Sineflow\ElasticsearchBundle\Exception\IndexRebuildingException;
 use Sineflow\ElasticsearchBundle\Exception\NoReadAliasException;
+use Sineflow\ElasticsearchBundle\Finder\Finder;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection;
 use Sineflow\ElasticsearchBundle\Result\Converter;
@@ -45,14 +46,19 @@ class IndexManager
     private $providerRegistry;
 
     /**
+     * @var Finder
+     */
+    private $finder;
+
+    /**
      * @var array
      */
     private $indexSettings;
 
     /**
-     * @var Converter
+     * @var Converter[]
      */
-    private $converter;
+    private $convertersCache;
 
     /**
      * @var EventDispatcher
@@ -84,6 +90,7 @@ class IndexManager
      * @param ConnectionManager          $connection
      * @param DocumentMetadataCollection $metadataCollection
      * @param ProviderRegistry           $providerRegistry
+     * @param Finder                     $finder
      * @param array                      $indexSettings
      */
     public function __construct(
@@ -91,12 +98,14 @@ class IndexManager
         ConnectionManager $connection,
         DocumentMetadataCollection $metadataCollection,
         ProviderRegistry $providerRegistry,
+        Finder $finder,
         array $indexSettings)
     {
         $this->managerName = $managerName;
         $this->connection = $connection;
         $this->metadataCollection = $metadataCollection;
         $this->providerRegistry = $providerRegistry;
+        $this->finder = $finder;
         $this->indexSettings = $indexSettings;
 
         if (true === $this->getUseAliases()) {
@@ -174,9 +183,6 @@ class IndexManager
     /**
      * Returns repository for a document class
      *
-     * TODO: instead of creating a new repository object every time, the repository class should be defined in the entity annotation
-     * TODO: Make sure the returned repository implements RepositoryInterface
-     *
      * @param string $documentClass
      *
      * @return Repository
@@ -187,13 +193,15 @@ class IndexManager
             return $this->repositories[$documentClass];
         }
 
-        $customRepositoryClass = $this->metadataCollection->getDocumentMetadata($documentClass)->getRepositoryClass();
+        $repositoryClass = $this->metadataCollection->getDocumentMetadata($documentClass)->getRepositoryClass() ?: Repository::class;
+        $repo = new $repositoryClass($this, $documentClass, $this->finder);
 
-        if ($customRepositoryClass) {
-            return new $customRepositoryClass($this, $documentClass);
-        } else {
-            return new Repository($this, $documentClass);
+        if (!($repo instanceof RepositoryInterface)) {
+            throw new \InvalidArgumentException(sprintf('Repository "%s" must implement "%s"', $repositoryClass, RepositoryInterface::class));
         }
+        $this->repositories[$documentClass] = $repo;
+
+        return $repo;
     }
 
     /**
@@ -529,6 +537,25 @@ class IndexManager
     }
 
     /**
+     * Reindex a single document in the ES index
+     *
+     * @param string $documentClass The document class in short notation (i.e. AppBundle:Product)
+     * @param int    $id
+     */
+    public function reindex($documentClass, $id)
+    {
+        $dataProvider = $this->getDataProvider($documentClass);
+        $document = $dataProvider->getDocument($id);
+        if (is_array($document)) {
+            $documentMetadata = $this->metadataCollection->getDocumentMetadata($documentClass);
+            $this->persistRaw($documentMetadata->getType(), $document);
+        } else {
+            $this->persist($document);
+        }
+        $this->commit();
+    }
+
+    /**
      * Adds document to a bulk request for the next flush.
      *
      * @param DocumentInterface $document The document entity to index in ES
@@ -540,8 +567,10 @@ class IndexManager
             new ElasticsearchPersistEvent($this->getConnection(), $document)
         );
 
-        $documentMetadata = $this->metadataCollection->getDocumentMetadata(get_class($document));
-        $documentArray = $this->getConverter()->convertToArray($document);
+        $documentClass = get_class($document);
+        $documentMetadata = $this->metadataCollection->getDocumentMetadata($documentClass);
+        $converter = isset($this->convertersCache[$documentClass]) ? $this->convertersCache[$documentClass] : new Converter($documentMetadata);
+        $documentArray = $converter->convertToArray($document);
 
         $this->persistRaw($documentMetadata->getType(), $documentArray);
 
@@ -603,47 +632,6 @@ class IndexManager
         }
 
         return $metadata;
-    }
-
-//    /**
-//     * Returns repository metadata for document.
-//     *
-//     * @param object $document
-//     *
-//     * @return DocumentMetadata|null
-//     */
-//    public function getDocumentMapping($document)
-//    {
-//        foreach ($this->getBundlesMapping() as $repository) {
-////            if (get_class($document) == $repository->getNamespace()) {
-//            if (get_class($document) == $repository->resolveClassName()) {
-//                return $repository;
-//            }
-//        }
-//
-//        return null;
-//    }
-//
-//    /**
-//     * @return array
-//     */
-//    public function getTypesMapping()
-//    {
-//        return $this->metadataCollection->getTypesMap();
-//    }
-
-    /**
-     * Returns converter instance.
-     *
-     * @return Converter
-     */
-    private function getConverter()
-    {
-        if (!$this->converter) {
-            $this->converter = new Converter($this->metadataCollection);
-        }
-
-        return $this->converter;
     }
 
     /**

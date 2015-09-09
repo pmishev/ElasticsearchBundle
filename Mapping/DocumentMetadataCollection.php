@@ -8,8 +8,8 @@ namespace Sineflow\ElasticsearchBundle\Mapping;
 class DocumentMetadataCollection
 {
     /**
-     * <index> => [
-     *      <type_class_short_name> => DocumentMetadata
+     * <index_manager_name> => [
+     *      <document_class_short_name> => DocumentMetadata
      *      ...
      * ]
      * ...
@@ -24,11 +24,6 @@ class DocumentMetadataCollection
     private $documentLocator;
 
     /**
-     * @var array Mappings of ES type names to their managing document classes
-     */
-    private $typeToClassMap = [];
-
-    /**
      * @param DocumentLocator $documentLocator
      * @param array           $metadata
      */
@@ -39,7 +34,7 @@ class DocumentMetadataCollection
     }
 
     /**
-     * Returns all document classes in the collection as keys and the corresponding index that manages them as values
+     * Returns all document classes in the collection as keys and the corresponding index manager that manages them as values
      *
      * @return array
      */
@@ -109,33 +104,23 @@ class DocumentMetadataCollection
     }
 
     /**
-     * Returns mapping of an ES type name to the short class name of the document entity managing that type
+     * Return mapping of document classes in short notation (i.e. AppBundle:Product) to ES types
      *
+     * @param array $documentClasses Only return those classes if specified
      * @return array
      */
-    public function getTypeToClassMap()
-    {
-        if (empty($this->typeToClassMap)) {
-            $this->typeToClassMap = $this->extractTypeToClassMap();
-        }
-
-        return $this->typeToClassMap;
-    }
-
-    /**
-     * Extracts mapping of an ES type name to the short class name of the document entity managing that type
-     *
-     * @return array
-     */
-    private function extractTypeToClassMap()
+    public function getClassToTypeMap(array $documentClasses = [])
     {
         $result = [];
-
-        foreach ($this->metadata as $index => $types) {
-            foreach ($types as $typeDocumentClass => $documentMetadata) {
+        foreach ($this->metadata as $index => $documentsMetadata) {
+            foreach ($documentsMetadata as $documentClass => $documentMetadata) {
                 /** @var DocumentMetadata $documentMetadata */
-                $result[$documentMetadata->getType()] = $typeDocumentClass;
+                $result[$documentClass] = $documentMetadata->getType();
             }
+        }
+
+        if ($documentClasses) {
+            $result = array_intersect_key($result, array_flip($documentClasses));
         }
 
         return $result;

@@ -43,6 +43,7 @@ class MappingPass implements CompilerPassInterface
                     $container->getDefinition($connectionService),
                     $container->getDefinition('sfes.document_metadata_collection'),
                     $container->getDefinition('sfes.provider_registry'),
+                    $container->getDefinition('sfes.finder'),
                     $this->getIndexParams($indexSettings, $container),
                 ]
             );
