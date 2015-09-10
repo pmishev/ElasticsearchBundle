@@ -167,7 +167,7 @@ class DocumentParser
                         [
                             'multiple' => $type instanceof Property ? $type->multiple : false,
                             'aliases' => $this->getAliases($child),
-//                            'namespace' => $child->getName(),
+                            'className' => $child->getName(),
                         ]
                     );
                 }

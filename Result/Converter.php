@@ -6,7 +6,6 @@ use Sineflow\ElasticsearchBundle\Document\DocumentInterface;
 use Sineflow\ElasticsearchBundle\Mapping\ClassMetadata;
 //use ONGR\ElasticsearchBundle\Mapping\Proxy\ProxyInterface;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
-use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
 
@@ -133,7 +132,6 @@ class Converter
     public function convertToArray($object, $aliases = [])
     {
         if (empty($aliases)) {
-            // TODO: Should I have metadata for nested objects in the metadatacollection? Should I pass the entire collection to the converter?
             $aliases = $this->documentMetadata->getAliases();
         }
 

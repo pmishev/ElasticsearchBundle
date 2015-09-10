@@ -97,9 +97,7 @@ class Repository implements RepositoryInterface
         }
 
         if ($resultType === self::RESULTS_OBJECT) {
-            return (new Converter(
-                $this->metadata
-            ))->convertToDocument($result);
+            return (new Converter($this->metadata))->convertToDocument($result);
         }
 
         return $this->parseResult($result, $resultType, '');
