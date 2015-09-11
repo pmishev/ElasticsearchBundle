@@ -4,6 +4,7 @@ namespace Sineflow\ElasticsearchBundle\Manager;
 
 use Elasticsearch\Client;
 use Elasticsearch\Common\Exceptions\Forbidden403Exception;
+use Sineflow\ElasticsearchBundle\Structure\BulkQueryItem;
 
 /**
  * This class interacts with elasticsearch using injected client.
@@ -26,7 +27,7 @@ class ConnectionManager
     private $connectionSettings;
 
     /**
-     * @var array Container for bulk queries.
+     * @var BulkQueryItem[] Container for bulk queries.
      */
     private $bulkQueries;
 
@@ -34,6 +35,12 @@ class ConnectionManager
      * @var array Holder for consistency, refresh and replication parameters.
      */
     private $bulkParams;
+
+    /**
+     * @var array Cache of alias/index names and their corresponding indices
+     */
+    private $cachedAliasIndices = [];
+
 
     /**
      * Construct.
@@ -87,37 +94,7 @@ class ConnectionManager
      */
     public function addBulkOperation($operation, $index, $type, array $query)
     {
-        if (!in_array($operation, ['index', 'create', 'update', 'delete'])) {
-            throw new \InvalidArgumentException('Wrong bulk operation selected');
-        }
-
-        $this->bulkQueries['body'][] = [
-            $operation => array_filter(
-                [
-                    '_index' => $index,
-                    '_type' => $type,
-                    '_id' => isset($query['_id']) ? $query['_id'] : null,
-                    '_ttl' => isset($query['_ttl']) ? $query['_ttl'] : null,
-                    '_parent' => isset($query['_parent']) ? $query['_parent'] : null,
-                ]
-            ),
-        ];
-        unset($query['_id'], $query['_ttl'], $query['_parent']);
-
-        switch ($operation) {
-            case 'index':
-            case 'create':
-                $this->bulkQueries['body'][] = $query;
-                break;
-            case 'update':
-                $this->bulkQueries['body'][] = ['doc' => $query];
-                break;
-            case 'delete':
-                // Body for delete operation is not needed to apply.
-            default:
-                // Do nothing.
-                break;
-        }
+        $this->bulkQueries[] = new BulkQueryItem($operation, $index, $type, $query);
     }
 
     /**
@@ -143,12 +120,34 @@ class ConnectionManager
      */
     public function commit($forceRefresh = true)
     {
+
         if (empty($this->bulkQueries)) {
             return;
         }
 
-        $this->bulkQueries = array_merge($this->bulkQueries, $this->bulkParams);
-        $this->getClient()->bulk($this->bulkQueries);
+        // Go through each bulk query item
+        $bulkRequest = [];
+        foreach ($this->bulkQueries as $bulkQueryItem) {
+            // Check whether the target index is actually an alias pointing to more than one index
+            if (isset($this->cachedAliasIndices[$bulkQueryItem->getIndex()])) {
+                $indices = $this->cachedAliasIndices[$bulkQueryItem->getIndex()];
+            } else {
+                $indices = array_keys($this->getClient()->indices()->getAlias(['index' => $bulkQueryItem->getIndex()]));
+            }
+            foreach ($indices as $index) {
+                foreach ($bulkQueryItem->getLines($index) as $bulkQueryLine) {
+                    $bulkRequest['body'][] = $bulkQueryLine;
+                }
+            }
+        }
+
+        $bulkRequest = array_merge($bulkRequest, $this->bulkParams);
+        $response = $this->getClient()->bulk($bulkRequest);
+
+        if ($response['errors']) {
+            // TODO: get the failed items from the bulk request (any response other than 200 or 201) and trigger an event with them to be handled in the app
+
+        }
         if ($forceRefresh) {
             $this->refresh();
         }
