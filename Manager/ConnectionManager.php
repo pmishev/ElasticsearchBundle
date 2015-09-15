@@ -133,6 +133,7 @@ class ConnectionManager
                 $indices = $this->cachedAliasIndices[$bulkQueryItem->getIndex()];
             } else {
                 $indices = array_keys($this->getClient()->indices()->getAlias(['index' => $bulkQueryItem->getIndex()]));
+                $this->cachedAliasIndices[$bulkQueryItem->getIndex()] = $indices;
             }
             foreach ($indices as $index) {
                 foreach ($bulkQueryItem->getLines($index) as $bulkQueryLine) {

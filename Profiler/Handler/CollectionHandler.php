@@ -22,11 +22,18 @@ class CollectionHandler extends AbstractProcessingHandler
     private $requestStack;
 
     /**
-     * @param RequestStack $requestStack
+     * @var bool
      */
-    public function __construct(RequestStack $requestStack)
+    private $backtraceEnabled;
+
+    /**
+     * @param RequestStack $requestStack
+     * @param bool         $backtraceEnabled
+     */
+    public function __construct(RequestStack $requestStack, $backtraceEnabled = false)
     {
         $this->requestStack = $requestStack;
+        $this->backtraceEnabled = $backtraceEnabled;
     }
 
     /**
@@ -39,6 +46,12 @@ class CollectionHandler extends AbstractProcessingHandler
             $record['extra']['requestUri'] = $request->getRequestUri();
             $record['extra']['route'] = $request->attributes->get('_route');
         }
+
+        $record['extra']['backtrace'] = null;
+        if ($this->backtraceEnabled && !empty($record['context'])) {
+            $record['extra']['backtrace'] = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+        }
+
         $this->records[] = $record;
     }
 

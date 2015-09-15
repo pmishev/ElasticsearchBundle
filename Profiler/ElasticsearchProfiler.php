@@ -137,20 +137,22 @@ class ElasticsearchProfiler implements DataCollectorInterface
     {
         $this->count += count($records) / 2;
         $queryBody = '';
+        $rawRequest = '';
         foreach ($records as $record) {
             // First record will never have context.
             if (!empty($record['context'])) {
                 $this->time += $record['context']['duration'];
                 $route = !empty($record['extra']['route']) ? $record['extra']['route'] : self::UNDEFINED_ROUTE;
-                $this->addQuery($route, $record, $queryBody);
+                $this->addQuery($route, $record, $queryBody, $rawRequest);
             } else {
                 $position = strpos($record['message'], ' -d');
                 $queryBody = $position !== false ? substr($record['message'], $position + 3) : '';
+                $rawRequest = $record['message'];
             }
         }
     }
 
-    private function addQuery($route, $record, $queryBody)
+    private function addQuery($route, $record, $queryBody, $rawRequest)
     {
         $parsedUrl = array_merge(
             [
@@ -166,37 +168,16 @@ class ElasticsearchProfiler implements DataCollectorInterface
         if ($parsedUrl['query']) {
             $senseRequest .= '?'.$parsedUrl['query'];
         }
-        // TODO: check if the query body needs to be escaped or otherwise transformed
-        $senseRequest .= $queryBody;
-
-//        dump($senseRequest);
-
-
-        // Get individual query params
-        parse_str(parse_url($record['context']['uri'], PHP_URL_QUERY), $httpParameters);
-
-        $body = trim($queryBody, " '\r\t\n");
-        // If it is a bulk request, it contains many separate JSON strings instead of one
-        $bodyExploded = explode("\n", $body);
-        foreach ($bodyExploded as &$bodyLine) {
-            $bodyLine = json_decode($bodyLine, true);
-        } unset($bodyLine);
-
-        // If it isn't a bulk request, we have only one JSON,
-        // otherwise group all separate JSON lines in an array, so we can encode and print them at once
-        if (count($bodyExploded) == 1) {
-            $body = $bodyExploded[0];
-        } else {
-            $body = $bodyExploded;
+        if ($queryBody) {
+            $senseRequest .= "\n" . trim($queryBody, " '");
         }
 
         $this->queries[$route][] = array_merge(
             [
-                'body' => $body !== null ? json_encode($body, JSON_PRETTY_PRINT) : '',
-                'method' => $record['context']['method'],
-                'httpParameters' => $httpParameters,
                 'time' => $record['context']['duration'] * 100,
+                'curlRequest' => $rawRequest,
                 'senseRequest' => $senseRequest,
+                'backtrace' => $record['extra']['backtrace'],
             ],
             array_diff_key(parse_url($record['context']['uri']), array_flip(['query']))
         );

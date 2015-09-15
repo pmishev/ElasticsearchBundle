@@ -11,6 +11,7 @@ parameters:
     sfes.logger.collection_handler.class: Sineflow\ElasticsearchBundle\Profiler\Handler\CollectionHandler
     sfes.profiler.class: Sineflow\ElasticsearchBundle\Profiler\ElasticsearchProfiler
     sfes.profiler.template: SineflowElasticsearchBundle:Profiler:profiler.html.twig
+    sfes.profiler_backtrace_enabled: false
 
 services:
 #    sfes.export:
@@ -64,7 +65,7 @@ services:
 
     sfes.logger.collection_handler:
         class: %sfes.logger.collection_handler.class%
-        arguments: [@request_stack]
+        arguments: [@request_stack, %sfes.profiler_backtrace_enabled%]
         public: false
 
     sfes.logger.trace:
