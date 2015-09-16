@@ -98,7 +98,7 @@ Backtrace is disabled by default for performance reasons.
 To enable it, set 'sfes.profiler_backtrace_enabled' to true.</pre>
                                 {% else %}
 <pre class="code">{% for line in query.backtrace %}
-{{ line.class|default('<none>')|trim }}:{{ line.line|default('') }} {{ line.function|default('') }}()
+{{ line.class|default('<none>')|trim }}:{{ line.function|default('') }}()
 {% endfor %}</pre>
                                 {% endif %}
                             </code>
