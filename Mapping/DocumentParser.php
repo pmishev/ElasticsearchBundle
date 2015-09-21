@@ -26,9 +26,9 @@ class DocumentParser
     private $reader;
 
     /**
-     * @var DocumentFinder Used to find documents.
+     * @var DocumentLocator Used to find documents.
      */
-    private $finder;
+    private $documentLocator;
 
     /**
      * @var array Contains gathered objects which later adds to documents.
@@ -47,13 +47,13 @@ class DocumentParser
     private $properties = [];
 
     /**
-     * @param Reader         $reader Used for reading annotations.
-     * @param DocumentFinder $finder Used for resolving namespaces.
+     * @param Reader          $reader          Used for reading annotations.
+     * @param DocumentLocator $documentLocator Used for resolving namespaces.
      */
-    public function __construct(Reader $reader, DocumentFinder $finder)
+    public function __construct(Reader $reader, DocumentLocator $documentLocator)
     {
         $this->reader = $reader;
-        $this->finder = $finder;
+        $this->documentLocator = $documentLocator;
         $this->registerAnnotations();
     }
 
@@ -74,7 +74,7 @@ class DocumentParser
         if ($class !== null && $class->create) {
             if ($class->parent !== null) {
                 $parent = $this->getDocumentParentType(
-                    new \ReflectionClass($this->finder->resolveClassName($class->parent))
+                    new \ReflectionClass($this->documentLocator->resolveClassName($class->parent))
                 );
             } else {
                 $parent = null;
@@ -104,9 +104,10 @@ class DocumentParser
                     'aliases' => $this->getAliases($reflectionClass),
                     'objects' => $this->getObjects(),
                     'repositoryClass' => $class->repositoryClass,
-                // TODO: what do I need these for?
-//                    'namespace' => $reflectionClass->getName(),
-//                    'class' => $reflectionClass->getShortName(),
+                    //'namespace' => $reflectionClass->getName(), // renamed to className below
+                    'className' => $reflectionClass->getName(),
+                    // TODO: what do I need this for?
+                    // 'class' => $reflectionClass->getShortName(),
                 ],
             ];
         }
@@ -160,13 +161,13 @@ class DocumentParser
                     'type' => $type->type,
                 ];
                 if ($type->objectName) {
-                    $child = new \ReflectionClass($this->finder->resolveClassName($type->objectName));
+                    $child = new \ReflectionClass($this->documentLocator->resolveClassName($type->objectName));
                     $alias[$type->name] = array_merge(
                         $alias[$type->name],
                         [
                             'multiple' => $type instanceof Property ? $type->multiple : false,
                             'aliases' => $this->getAliases($child),
-//                            'namespace' => $child->getName(),
+                            'className' => $child->getName(),
                         ]
                     );
                 }
@@ -350,7 +351,7 @@ class DocumentParser
      */
     private function getObjectMapping($objectName)
     {
-        $namespace = $this->finder->resolveClassName($objectName);
+        $namespace = $this->documentLocator->resolveClassName($objectName);
 
         if (array_key_exists($namespace, $this->objects)) {
             return $this->objects[$namespace];

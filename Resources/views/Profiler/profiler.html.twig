@@ -29,79 +29,91 @@
 {% endblock %}
 
 {% block queries %}
+
     {% if collector.queryCount == 0 %}
         <p>
             <em>No queries.</em>
         </p>
     {% else %}
-        <ul class="queries" id="queriesPlaceholder">
-            {% for i, route in collector.queries %}
-                <li>
-                    <h3>Route: <i>{{ i }}</i></h3>
-                    <ul>
-                        {% for q, query in route %}
-                            <li class="{{ cycle(['odd', 'even'], i) }}" data-extra-info="{{ query.time }}" data-target-id="{{ i ~ q }}">
-                                <div id="queryNo-{{ i ~ q }}">
-                                    <div>
-                                            <span>
-                                                <strong>Method:</strong> {{ query.method }}
-                                            </span>
-                                    </div>
-                                    <div>
-                                            <span>
-                                                <strong>Host: </strong>
-                                                {% if query.scheme is defined %}{{- query.scheme ~ "://" -}}{% endif %}
-                                                {{- query.host -}}
-                                                {% if query.port is defined %}:{{ query.port }}{% endif %}
-                                            </span>
-                                    </div>
-                                    <div>
-                                            <span>
-                                                <strong>Path:</strong> {{ query.path }}
-                                            </span>
-                                    </div>
-                                    <div>
-                                            <span>
-                                                <strong>Http parameters: </strong>
-                                                {% if query.httpParameters is not empty -%}
-                                                    {{ profiler_dump(query.httpParameters) }}
-                                                {%- else -%}
-                                                    <small>empty</small>
-                                                {%- endif -%}
-                                            </span>
-                                    </div>
-                                    <div>
-                                            <span>
-                                                <strong>Took:</strong> {{ query.time }} ms
-                                            </span>
-                                    </div>
-                                    {% if query.body is not empty %}
-                                        <div onclick="return expandQuery(this);" title="Expand query" data-target-id="code-{{ i ~q }}" style="cursor: pointer;">
-                                        <span id="smallcode-{{ i ~ q }}">
-                                            <strong>Body:</strong> <small>{{ query.body|slice(0, 100) }}</small>
-                                        </span>
-                                            <img alt="+" src="{{ asset('bundles/framework/images/blue_picto_more.gif') }}" style="display: inline;" />
-                                            <img alt="-" src="{{ asset('bundles/framework/images/blue_picto_less.gif') }}" style="display: none;" />
-                                        </div>
-                                        <code id="code-{{ i ~ q }}" class="hide">
-                                            <pre class="code">{{ query.body }}</pre>
-                                        </code>
-                                    {% else %}
-                                        <div>
-                                        <span>
-                                            <strong>Body:</strong> <small>empty</small>
-                                        </span>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </li>
-                {% if not loop.last %}<li><hr/></li>{% endif %}
-            {% endfor %}
-        </ul>
+
+        {% for i, route in collector.queries %}
+            <h3>Route: <i>{{ i }}</i></h3>
+            <table class="alt" id="queriesPlaceholder-{{ i }}">
+                <thead>
+                <tr>
+                    <th>#<span>&#9650;</span></th>
+                    <th>Time<span></span></th>
+                    <th style="width: 100%;">Info</th>
+                </tr>
+                </thead>
+                <tbody id="queries">
+                {% for q, query in route %}
+                    <tr id="queryNo-{{ q }}" class="{{ cycle(['odd', 'even'], q) }}">
+                        <td>{{ q }}</td>
+                        <td>{{ '%0.3f'|format(query.time) }}&nbsp;ms</td>
+                        <td>
+                            <div onclick="return expandQuery(this);" title="Expand query" data-target-id="sensecode-{{ i ~q }}" style="cursor: pointer;">
+                                <img alt="+" src="{{ asset('bundles/framework/images/blue_picto_more.gif') }}" style="display: inline;" />
+                                <img alt="-" src="{{ asset('bundles/framework/images/blue_picto_less.gif') }}" style="display: none;" />
+                                <span id="smallsensecode-{{ i ~ q }}">
+                                    <strong>Sense:</strong>
+                                    <small>
+                                        {{ query.senseRequest|length > 50 ? query.senseRequest|slice(0, 100) ~ ' ...' : query.senseRequest }}
+                                    </small>
+                                </span>
+                            </div>
+                            <code id="sensecode-{{ i ~ q }}" class="hide">
+                                <pre class="code">{{ query.senseRequest }}</pre>
+                            </code>
+
+                            <div onclick="return expandQuery(this);" title="Expand query" data-target-id="curlcode-{{ i ~q }}" style="cursor: pointer;">
+                                <img alt="+" src="{{ asset('bundles/framework/images/blue_picto_more.gif') }}" style="display: inline;" />
+                                <img alt="-" src="{{ asset('bundles/framework/images/blue_picto_less.gif') }}" style="display: none;" />
+                                <span id="smallcurlcode-{{ i ~ q }}">
+                                    <strong>Request:</strong>
+                                    <small>
+                                        {{ query.curlRequest|length > 50 ? query.curlRequest|slice(0, 100) ~ ' ...' : query.curlRequest }}
+                                    </small>
+                                </span>
+                            </div>
+                            <code id="curlcode-{{ i ~ q }}" class="hide">
+                                <pre class="code">{{ query.curlRequest }}</pre>
+                            </code>
+
+
+                            <div onclick="return expandQuery(this);" title="Expand query" data-target-id="backtrace-{{ i ~q }}" style="cursor: pointer;">
+                                <img alt="+" src="{{ asset('bundles/framework/images/blue_picto_more.gif') }}" style="display: inline;" />
+                                <img alt="-" src="{{ asset('bundles/framework/images/blue_picto_less.gif') }}" style="display: none;" />
+                                <span id="smallbacktrace-{{ i ~ q }}">
+                                    <strong>Backtrace:</strong>
+                                    <small>
+                                        Click to view
+                                    </small>
+                                </span>
+                            </div>
+                            <code id="backtrace-{{ i ~ q }}" class="hide">
+                                {% if query.backtrace is empty %}
+                                    <pre>
+Backtrace is disabled by default for performance reasons.
+To enable it, set 'sfes.profiler_backtrace_enabled' to true.</pre>
+                                {% else %}
+<pre class="code">{% for line in query.backtrace %}
+{{ line.class|default('<none>')|trim }}:{{ line.function|default('') }}()
+{% endfor %}</pre>
+                                {% endif %}
+                            </code>
+
+
+                        </td>
+                    </tr>
+
+                {% endfor %}
+                </tbody>
+            </table>
+        {% endfor %}
+
     {% endif %}
+
 {% endblock %}
 
 {% block panel %}
@@ -120,18 +132,18 @@
     <script type="text/javascript">//<![CDATA[
         function expandQuery(link) {
             var sections = link.children,
-                    target = link.getAttribute('data-target-id'),
-                    targetId = target.replace('code-', '');
-            if (document.getElementById('code-' + targetId).className != 'hide') {
+                target = link.getAttribute('data-target-id');
+            console.log(sections);
+            if (document.getElementById(target).className != 'hide') {
                 document.getElementById(target).style.display = 'none';
-                document.getElementById('code-' + targetId).className = 'hide';
-                sections[1].style.display = 'inline';
-                sections[2].style.display = 'none';
-            } else {
-                document.getElementById('code-' + targetId).className = 'show';
-                document.getElementById(target).style.display = 'inline';
+                document.getElementById(target).className = 'hide';
+                sections[0].style.display = 'inline';
                 sections[1].style.display = 'none';
-                sections[2].style.display = 'inline';
+            } else {
+                document.getElementById(target).className = 'show';
+                document.getElementById(target).style.display = 'inline';
+                sections[0].style.display = 'none';
+                sections[1].style.display = 'inline';
             }
             return false;
         }

@@ -5,12 +5,13 @@ namespace Sineflow\ElasticsearchBundle\Result;
 use Sineflow\ElasticsearchBundle\Document\DocumentInterface;
 use Sineflow\ElasticsearchBundle\Mapping\ClassMetadata;
 //use ONGR\ElasticsearchBundle\Mapping\Proxy\ProxyInterface;
-use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection;
+use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
 
 /**
  * This class converts array to document object.
+ * TODO: remove the commented proxy fields stuff or make it work if it's needed
  */
 class Converter
 {
@@ -25,9 +26,9 @@ class Converter
 //    private $bundlesMapping;
 
     /**
-     * @var DocumentMetadataCollection
+     * @var DocumentMetadata
      */
-    private $documentMetadataCollection;
+    private $documentMetadata;
 
     /**
      * @var PropertyAccessor
@@ -37,14 +38,13 @@ class Converter
     /**
      * Constructor.
      *
-     * @param array $typesMapping
-     * @param array $bundlesMapping
+     * @param DocumentMetadata $documentMetadata
      */
-    public function __construct(DocumentMetadataCollection $metadataCollection)
+    public function __construct(DocumentMetadata $documentMetadata)
     {
 //        $this->typesMapping = $typesMapping;
 //        $this->bundlesMapping = $bundlesMapping;
-        $this->documentMetadataCollection = $metadataCollection;
+        $this->documentMetadata = $documentMetadata;
 
     }
 
@@ -59,25 +59,17 @@ class Converter
      */
     public function convertToDocument($rawData)
     {
-        $typesMapping = $this->documentMetadataCollection->getTypeToClassMap();
-
-        if (!isset($typesMapping[$rawData['_type']])) {
-            throw new \LogicException("Got document of unknown type '{$rawData['_type']}'.");
-        }
-
-        die('TODO');
-
-        /** @var ClassMetadata $metadata */
-        $metadata = $this->documentMetadataCollection->getDocumentMetadata($typesMapping[$rawData['_type']]);
         $data = isset($rawData['_source']) ? $rawData['_source'] : array_map('reset', $rawData['fields']);
 //        $proxy = $metadata->getProxyNamespace();
 
         /** @var DocumentInterface $object */
-        $object = $this->assignArrayToObject($data, new $proxy(), $metadata->getAliases());
+//        $object = $this->assignArrayToObject($data, new $proxy(), $metadata->getAliases());
+        $className = $this->documentMetadata->getClassName();
+        $object = $this->assignArrayToObject($data, new $className(), $this->documentMetadata->getAliases());
 
-        if ($object instanceof ProxyInterface) {
-            $object->__setInitialized(true);
-        }
+//        if ($object instanceof ProxyInterface) {
+//            $object->__setInitialized(true);
+//        }
 
         $this->setObjectFields($object, $rawData, ['_id', '_score', 'highlight', 'fields _parent', 'fields _ttl']);
 
@@ -116,7 +108,8 @@ class Converter
                 } else {
                     $value = $this->assignArrayToObject(
                         $value,
-                        new $aliases[$name]['proxyNamespace'](),
+                        //new $aliases[$name]['proxyNamespace'](),
+                        new $aliases[$name]['className'](),
                         $aliases[$name]['aliases']
                     );
                 }
@@ -139,7 +132,7 @@ class Converter
     public function convertToArray($object, $aliases = [])
     {
         if (empty($aliases)) {
-            $aliases = $this->getAlias($object);
+            $aliases = $this->documentMetadata->getAliases();
         }
 
         $array = [];
@@ -158,12 +151,13 @@ class Converter
                     if ($alias['multiple']) {
                         $this->isTraversable($value);
                         foreach ($value as $item) {
-                            // TODO: add namespace property to alias and maybe rename it to className
 //                            $this->checkVariableType($item, [$alias['namespace'], $alias['proxyNamespace']]);
+                            $this->checkVariableType($item, [$alias['className']]);
                             $new[] = $this->convertToArray($item, $alias['aliases']);
                         }
                     } else {
 //                        $this->checkVariableType($value, [$alias['namespace'], $alias['proxyNamespace']]);
+                        $this->checkVariableType($value, [$alias['className']]);
                         $new = $this->convertToArray($value, $alias['aliases']);
                     }
                     $value = $new;
@@ -291,19 +285,19 @@ class Converter
         return true;
     }
 
-    /**
-     * Returns aliases for certain document.
-     *
-     * @param DocumentInterface $document
-     *
-     * @return array
-     */
-    private function getAlias($document)
-    {
-        $class = get_class($document);
-
-        return $this->documentMetadataCollection->getDocumentMetadata($class)->getAliases();
-    }
+//    /**
+//     * Returns aliases for certain document.
+//     *
+//     * @param DocumentInterface $document
+//     *
+//     * @return array
+//     */
+//    private function getAlias($document)
+//    {
+//        $class = get_class($document);
+//
+//        return $this->documentMetadataCollection->getDocumentMetadata($class)->getAliases();
+//    }
 
     /**
      * Returns property accessor instance.

@@ -1,15 +1,17 @@
 parameters:
     sfes.provider_registry.class: Sineflow\ElasticsearchBundle\Document\Provider\ProviderRegistry
     sfes.index_manager_factory.class: Sineflow\ElasticsearchBundle\Manager\IndexManagerFactory
+    sfes.finder.class: Sineflow\ElasticsearchBundle\Finder\Finder
 #    sfes.logging.path: %kernel.logs_dir%/elasticsearch_%kernel.environment%.log
 #    sfes.export.class: ONGR\ElasticsearchBundle\Service\ExportService
 #    sfes.import.class: ONGR\ElasticsearchBundle\Service\ImportService
-    sfes.document_finder.class: Sineflow\ElasticsearchBundle\Mapping\DocumentFinder
+    sfes.document_locator.class: Sineflow\ElasticsearchBundle\Mapping\DocumentLocator
     sfes.document_parser.class: Sineflow\ElasticsearchBundle\Mapping\DocumentParser
     sfes.document_metadata_collector.class: Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector
     sfes.logger.collection_handler.class: Sineflow\ElasticsearchBundle\Profiler\Handler\CollectionHandler
     sfes.profiler.class: Sineflow\ElasticsearchBundle\Profiler\ElasticsearchProfiler
     sfes.profiler.template: SineflowElasticsearchBundle:Profiler:profiler.html.twig
+    sfes.profiler_backtrace_enabled: false
 
 services:
 #    sfes.export:
@@ -28,8 +30,12 @@ services:
         calls:
             - [setContainer, ["@service_container"]]
 
-    sfes.document_finder:
-        class: %sfes.document_finder.class%
+    sfes.finder:
+        class: %sfes.finder.class%
+        arguments: [@sfes.document_metadata_collection, @sfes.index_manager_factory]
+
+    sfes.document_locator:
+        class: %sfes.document_locator.class%
         arguments: [%kernel.bundles%]
         calls:
             - [setDocumentDir, ["%sfes.document_dir%"]]
@@ -50,16 +56,16 @@ services:
 
     sfes.document_parser:
         class: %sfes.document_parser.class%
-        arguments: [@sfes.annotations.cached_reader, @sfes.document_finder]
+        arguments: [@sfes.annotations.cached_reader, @sfes.document_locator]
         public: false
 
     sfes.document_metadata_collector:
         class: %sfes.document_metadata_collector.class%
-        arguments: [@sfes.document_finder, @sfes.document_parser]
+        arguments: [@sfes.document_locator, @sfes.document_parser]
 
     sfes.logger.collection_handler:
         class: %sfes.logger.collection_handler.class%
-        arguments: [@request_stack]
+        arguments: [@request_stack, %sfes.profiler_backtrace_enabled%]
         public: false
 
     sfes.logger.trace:

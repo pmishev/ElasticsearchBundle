@@ -76,7 +76,7 @@ class SineflowElasticsearchExtension extends Extension
             $documentsMetadataCollection = new Definition(
                 'Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection',
                 [
-                    new Reference('sfes.document_finder'),
+                    new Reference('sfes.document_locator'),
                     $documentsMetadataDefinitions,
                 ]
             );
@@ -125,6 +125,7 @@ class SineflowElasticsearchExtension extends Extension
             $connectionDefinition = new Definition(
                 'Sineflow\ElasticsearchBundle\Manager\ConnectionManager',
                 [
+                    $connectionName,
                     $client,
                     $connectionSettings,
                 ]

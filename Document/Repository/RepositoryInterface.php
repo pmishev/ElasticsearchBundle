@@ -2,6 +2,7 @@
 
 namespace Sineflow\ElasticsearchBundle\Document\Repository;
 
+use Sineflow\ElasticsearchBundle\Finder\Finder;
 use Sineflow\ElasticsearchBundle\Manager\IndexManager;
 
 /**
@@ -14,7 +15,8 @@ interface RepositoryInterface
      *
      * @param IndexManager $manager
      * @param string       $documentClass
+     * @param Finder       $finder
      */
-    public function __construct($manager, $documentClass);
+    public function __construct($manager, $documentClass, Finder $finder);
 
 }

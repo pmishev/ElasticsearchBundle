@@ -8,37 +8,33 @@ namespace Sineflow\ElasticsearchBundle\Mapping;
 class DocumentMetadataCollection
 {
     /**
-     * <index> => [
-     *      <type_class_short_name> => DocumentMetadata
+     * <index_manager_name> => [
+     *      <document_class_short_name> => DocumentMetadata
      *      ...
      * ]
-
+     * ...
+     *
      * @var array
      */
     private $metadata;
 
     /**
-     * @var DocumentFinder
+     * @var DocumentLocator
      */
-    private $finder;
+    private $documentLocator;
 
     /**
-     * @var array Mappings of ES type names to their managing document classes
+     * @param DocumentLocator $documentLocator
+     * @param array           $metadata
      */
-    private $typeToClassMap = [];
-
-    /**
-     * @param DocumentFinder $finder
-     * @param array          $metadata
-     */
-    public function __construct(DocumentFinder $finder, array $metadata)
+    public function __construct(DocumentLocator $documentLocator, array $metadata)
     {
-        $this->finder = $finder;
+        $this->documentLocator = $documentLocator;
         $this->metadata = $metadata;
     }
 
     /**
-     * Returns all document classes in the collection as keys and the corresponding index that manages them as values
+     * Returns all document classes in the collection as keys and the corresponding index manager that manages them as values
      *
      * @return array
      */
@@ -52,6 +48,22 @@ class DocumentMetadataCollection
         }
 
         return $result;
+    }
+
+    /**
+     * Returns the index manager name that manages the given entity document class
+     *
+     * @param string $documentClass
+     * @return string
+     */
+    public function getDocumentClassIndex($documentClass)
+    {
+        $indices = $this->getDocumentClassesIndices();
+        if (!isset($indices[$documentClass])) {
+            throw new \InvalidArgumentException(sprintf('Entity "%s" is not managed by any index manager', $documentClass));
+        }
+
+        return $indices[$documentClass];
     }
 
     /**
@@ -80,7 +92,7 @@ class DocumentMetadataCollection
      */
     public function getDocumentMetadata($documentClass)
     {
-        $documentClass = $this->finder->getShortClassName($documentClass);
+        $documentClass = $this->documentLocator->getShortClassName($documentClass);
         foreach ($this->metadata as $index => $types) {
             foreach ($types as $typeDocumentClass => $documentMetadata) {
                 if ($documentClass === $typeDocumentClass) {
@@ -92,33 +104,23 @@ class DocumentMetadataCollection
     }
 
     /**
-     * Returns mapping of an ES type name to the short class name of the document entity managing that type
+     * Return mapping of document classes in short notation (i.e. AppBundle:Product) to ES types
      *
+     * @param array $documentClasses Only return those classes if specified
      * @return array
      */
-    public function getTypeToClassMap()
-    {
-        if (empty($this->typeToClassMap)) {
-            $this->typeToClassMap = $this->extractTypeToClassMap();
-        }
-
-        return $this->typeToClassMap;
-    }
-
-    /**
-     * Extracts mapping of an ES type name to the short class name of the document entity managing that type
-     *
-     * @return array
-     */
-    private function extractTypeToClassMap()
+    public function getClassToTypeMap(array $documentClasses = [])
     {
         $result = [];
-
-        foreach ($this->metadata as $index => $types) {
-            foreach ($types as $typeDocumentClass => $documentMetadata) {
+        foreach ($this->metadata as $index => $documentsMetadata) {
+            foreach ($documentsMetadata as $documentClass => $documentMetadata) {
                 /** @var DocumentMetadata $documentMetadata */
-                $result[$documentMetadata->getType()] = $typeDocumentClass;
+                $result[$documentClass] = $documentMetadata->getType();
             }
+        }
+
+        if ($documentClasses) {
+            $result = array_intersect_key($result, array_flip($documentClasses));
         }
 
         return $result;

@@ -10,9 +10,9 @@ use Sineflow\ElasticsearchBundle\Document\DocumentInterface;
 class DocumentMetadataCollector
 {
     /**
-     * @var DocumentFinder
+     * @var DocumentLocator
      */
-    private $finder;
+    private $documentLocator;
 
     /**
      * @var DocumentParser
@@ -25,12 +25,12 @@ class DocumentMetadataCollector
     private $mappings = [];
 
     /**
-     * @param DocumentFinder $finder For finding documents.
-     * @param DocumentParser $parser For reading document annotations.
+     * @param DocumentLocator $documentLocator For finding documents.
+     * @param DocumentParser  $parser For reading document annotations.
      */
-    public function __construct(DocumentFinder $finder, DocumentParser $parser)
+    public function __construct(DocumentLocator $documentLocator, DocumentParser $parser)
     {
-        $this->finder = $finder;
+        $this->documentLocator = $documentLocator;
         $this->parser = $parser;
     }
 
@@ -93,7 +93,7 @@ class DocumentMetadataCollector
     public function getMetadataFromClass($documentClassName)
     {
         $metadata = $this->getDocumentReflectionMetadata(
-            new \ReflectionClass($this->finder->resolveClassName($documentClassName))
+            new \ReflectionClass($this->documentLocator->resolveClassName($documentClassName))
         );
 
         return $metadata;
