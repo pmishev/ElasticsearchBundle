@@ -70,19 +70,16 @@ final class Document implements DumperInterface
     /**
      * {@inheritdoc}
      */
-    public function dump(array $exclude = [])
+    public function dump(array $options = [])
     {
-        return array_diff_key(
-            [
-                '_ttl' => $this->ttl,
-                '_all' => $this->all,
-                'enabled' => $this->enabled,
-                'dynamic' => $this->dynamic,
-                'dynamic_templates' => $this->dynamicTemplates,
-                'transform' => $this->transform,
-                'dynamic_date_formats' => $this->dynamicDateFormats,
-            ],
-            $exclude
-        );
+        return [
+            '_ttl' => $this->ttl,
+            '_all' => $this->all,
+            'enabled' => $this->enabled,
+            'dynamic' => $this->dynamic,
+            'dynamic_templates' => $this->dynamicTemplates,
+            'transform' => $this->transform,
+            'dynamic_date_formats' => $this->dynamicDateFormats,
+        ];
     }
 }

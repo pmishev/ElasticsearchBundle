@@ -26,7 +26,7 @@ class DocumentMetadataCollector
 
     /**
      * @param DocumentLocator $documentLocator For finding documents.
-     * @param DocumentParser  $parser For reading document annotations.
+     * @param DocumentParser  $parser          For reading document annotations.
      */
     public function __construct(DocumentLocator $documentLocator, DocumentParser $parser)
     {
@@ -71,17 +71,17 @@ class DocumentMetadataCollector
         return $this->mappings[$documentClassName];
     }
 
-    /**
-     * Returns document mapping with metadata from a document object
-     *
-     * @param DocumentInterface $document
-     *
-     * @return array
-     */
-    public function getMetadataFromObject(DocumentInterface $document)
-    {
-        return $this->getDocumentReflectionMetadata(new \ReflectionObject($document));
-    }
+//    /**
+//     * Returns document mapping with metadata from a document object
+//     *
+//     * @param DocumentInterface $document
+//     *
+//     * @return array
+//     */
+//    public function getMetadataFromObject(DocumentInterface $document)
+//    {
+//        return $this->getDocumentReflectionMetadata(new \ReflectionObject($document));
+//    }
 
     /**
      * Returns document mapping with metadata

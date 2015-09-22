@@ -72,16 +72,16 @@ class SineflowElasticsearchExtension extends Extension
 
         foreach ($indices as $indexManagerName => $indexSettings) {
             $documentsMetadataDefinitions[$indexManagerName] = $this->getDocumentsMetadataDefinitions($container, $indexSettings);
-
-            $documentsMetadataCollection = new Definition(
-                'Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection',
-                [
-                    new Reference('sfes.document_locator'),
-                    $documentsMetadataDefinitions,
-                ]
-            );
-            $container->setDefinition('sfes.document_metadata_collection', $documentsMetadataCollection);
         }
+
+        $documentsMetadataCollection = new Definition(
+            'Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection',
+            [
+                new Reference('sfes.document_locator'),
+                $documentsMetadataDefinitions,
+            ]
+        );
+        $container->setDefinition('sfes.document_metadata_collection', $documentsMetadataCollection);
     }
 
     /**

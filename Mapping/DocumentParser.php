@@ -4,8 +4,10 @@ namespace Sineflow\ElasticsearchBundle\Mapping;
 
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\Reader;
+use Sineflow\ElasticsearchBundle\Annotation\AbstractProperty;
 use Sineflow\ElasticsearchBundle\Annotation\Document;
 //use Sineflow\ElasticsearchBundle\Annotation\Inherit;
+use Sineflow\ElasticsearchBundle\Annotation\MLProperty;
 use Sineflow\ElasticsearchBundle\Annotation\MultiField;
 use Sineflow\ElasticsearchBundle\Annotation\Property;
 //use Sineflow\ElasticsearchBundle\Annotation\Skip;
@@ -18,7 +20,17 @@ class DocumentParser
     /**
      * @const string
      */
-    const PROPERTY_ANNOTATION = 'Sineflow\ElasticsearchBundle\Annotation\Property';
+    const PROPERTY_ANNOTATION = 'Sineflow\ElasticsearchBundle\Annotation\AbstractProperty';
+
+    /**
+     * @const string
+     */
+    const LANGUAGE_SEPARATOR = '-';
+
+    /**
+     * @const string
+     */
+    const DEFAULT_LANG_SUFFIX = 'default';
 
     /**
      * @var Reader Used to read document annotations.
@@ -120,7 +132,7 @@ class DocumentParser
      *
      * @param \ReflectionProperty $property
      *
-     * @return Property
+     * @return AbstractProperty
      */
     public function getPropertyAnnotationData($property)
     {
@@ -154,18 +166,19 @@ class DocumentParser
         $alias = [];
         /** @var \ReflectionProperty $property */
         foreach ($this->getDocumentPropertiesReflection($reflectionClass) as $name => $property) {
-            $type = $this->getPropertyAnnotationData($property);
-            if ($type !== null) {
-                $alias[$type->name] = [
+            $propertyAnnotation = $this->getPropertyAnnotationData($property);
+            if ($propertyAnnotation !== null) {
+                $alias[$propertyAnnotation->name] = [
                     'propertyName' => $name,
-                    'type' => $type->type,
+                    'type' => $propertyAnnotation->type,
                 ];
-                if ($type->objectName) {
-                    $child = new \ReflectionClass($this->documentLocator->resolveClassName($type->objectName));
-                    $alias[$type->name] = array_merge(
-                        $alias[$type->name],
+                // If property is a (nested) object
+                if ($propertyAnnotation->objectName) {
+                    $child = new \ReflectionClass($this->documentLocator->resolveClassName($propertyAnnotation->objectName));
+                    $alias[$propertyAnnotation->name] = array_merge(
+                        $alias[$propertyAnnotation->name],
                         [
-                            'multiple' => $type instanceof Property ? $type->multiple : false,
+                            'multiple' => $propertyAnnotation->multiple,
                             'aliases' => $this->getAliases($child),
                             'className' => $child->getName(),
                         ]
@@ -292,7 +305,7 @@ class DocumentParser
      *
      * @param \ReflectionClass $reflectionClass Class to read properties from.
      * @param array            $properties      Properties to skip.
-     * @param bool             $flag            If false exludes properties, true only includes properties.
+     * @param bool             $flag            If false excludes properties, true only includes properties.
      *
      * @return array
      */
@@ -301,43 +314,61 @@ class DocumentParser
         $mapping = [];
         /** @var \ReflectionProperty $property */
         foreach ($this->getDocumentPropertiesReflection($reflectionClass) as $name => $property) {
-            $type = $this->getPropertyAnnotationData($property);
+            $propertyAnnotation = $this->getPropertyAnnotationData($property);
 
+            // TODO: where is this function called with $flag == true or with $properties set?
             if ((in_array($name, $properties) && !$flag)
                 || (!in_array($name, $properties) && $flag)
-                || empty($type)
+                || empty($propertyAnnotation)
             ) {
                 continue;
             }
 
-            $maps = $type->dump();
-
-            // Object.
-            if (in_array($type->type, ['object', 'nested']) && !empty($type->objectName)) {
-                $maps = array_replace_recursive($maps, $this->getObjectMapping($type->objectName));
-            }
-
-            // MultiField.
-            if (isset($maps['fields']) && !in_array($type->type, ['object', 'nested'])) {
-                $fieldsMap = [];
-                /** @var MultiField $field */
-                foreach ($maps['fields'] as $field) {
-                    $fieldsMap[$field->name] = $field->dump();
+            // If it is a multi-language property
+            if ($propertyAnnotation instanceof MLProperty) {
+                // TODO: inject LanguageProvider service here somehow and get the languages from it
+                $languages = ['en', 'cn', 'tw'];
+                $defLanguage = 'en';
+                foreach ($languages as $language) {
+                    $mapping[$propertyAnnotation->name . self::LANGUAGE_SEPARATOR . $language] = $this->getPropertyMapping($propertyAnnotation, $language);
                 }
-                $maps['fields'] = $fieldsMap;
+                $mapping[$propertyAnnotation->name . self::LANGUAGE_SEPARATOR . self::DEFAULT_LANG_SUFFIX] = $this->getPropertyMapping($propertyAnnotation, $defLanguage);
+            } else {
+                $mapping[$propertyAnnotation->name] = $this->getPropertyMapping($propertyAnnotation);
             }
 
-            // Raw override.
-            if (isset($maps['raw'])) {
-                $raw = $maps['raw'];
-                unset($maps['raw']);
-                $maps = array_merge($maps, $raw);
-            }
-
-            $mapping[$type->name] = $maps;
         }
 
         return $mapping;
+    }
+
+    private function getPropertyMapping(AbstractProperty $propertyAnnotation, $language = null)
+    {
+        $propertyMapping = $propertyAnnotation->dump(['language' => $language]);
+
+        // Object.
+        if (in_array($propertyAnnotation->type, ['object', 'nested']) && !empty($propertyAnnotation->objectName)) {
+            $propertyMapping = array_replace_recursive($propertyMapping, $this->getObjectMapping($propertyAnnotation->objectName));
+        }
+
+        // MultiField.
+        if (isset($propertyMapping['fields']) && !in_array($propertyAnnotation->type, ['object', 'nested'])) {
+            $fieldsMap = [];
+            /** @var MultiField $field */
+            foreach ($propertyMapping['fields'] as $field) {
+                $fieldsMap[$field->name] = $field->dump();
+            }
+            $propertyMapping['fields'] = $fieldsMap;
+        }
+
+        // Raw override.
+        if (isset($propertyMapping['raw'])) {
+            $raw = $propertyMapping['raw'];
+            unset($propertyMapping['raw']);
+            $propertyMapping = array_merge($propertyMapping, $raw);
+        }
+
+        return $propertyMapping;
     }
 
     /**

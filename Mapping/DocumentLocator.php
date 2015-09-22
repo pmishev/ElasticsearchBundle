@@ -68,6 +68,8 @@ class DocumentLocator
      *
      * @param string $className
      * @return string
+     *
+     * TODO: what's the difference between this method and the above resolveClassName ?
      */
     public function getShortClassName($className)
     {

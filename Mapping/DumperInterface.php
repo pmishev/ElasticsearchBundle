@@ -10,9 +10,9 @@ interface DumperInterface
     /**
      * Dumps properties into array.
      *
-     * @param array $exclude Properties array to exclude from dump.
+     * @param array $options Options to configure dump output
      *
      * @return array
      */
-    public function dump(array $exclude = []);
+    public function dump(array $options = []);
 }
