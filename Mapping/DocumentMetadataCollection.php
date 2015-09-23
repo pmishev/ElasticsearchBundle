@@ -16,7 +16,7 @@ class DocumentMetadataCollection
      *
      * @var array
      */
-    private $metadata;
+    private $metadata = [];
 
     /**
      * @var DocumentLocator
@@ -32,6 +32,16 @@ class DocumentMetadataCollection
         $this->documentLocator = $documentLocator;
         $this->metadata = $metadata;
     }
+
+//    /**
+//     * @param string           $indexManager
+//     * @param string           $className
+//     * @param DocumentMetadata $documentMetadata
+//     */
+//    public function setDocumentMetadata($indexManager, $className, DocumentMetadata $documentMetadata)
+//    {
+//        $this->metadata[$indexManager][$className] = $documentMetadata;
+//    }
 
     /**
      * Returns all document classes in the collection as keys and the corresponding index manager that manages them as values

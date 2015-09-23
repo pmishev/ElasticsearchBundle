@@ -2,8 +2,6 @@
 
 namespace Sineflow\ElasticsearchBundle\Mapping;
 
-use Sineflow\ElasticsearchBundle\Document\DocumentInterface;
-
 /**
  * DocumentParser wrapper for getting type/document mapping.
  */
@@ -20,11 +18,6 @@ class DocumentMetadataCollector
     private $parser;
 
     /**
-     * @var array Contains client mappings gathered from document definitions.
-     */
-    private $mappings = [];
-
-    /**
      * @param DocumentLocator $documentLocator For finding documents.
      * @param DocumentParser  $parser          For reading document annotations.
      */
@@ -33,55 +26,6 @@ class DocumentMetadataCollector
         $this->documentLocator = $documentLocator;
         $this->parser = $parser;
     }
-
-    /**
-     * Retrieves type mapping for the Elasticsearch client
-     *
-     * @param string $documentClassName Bundle name to retrieve mappings from.
-     * @param bool   $useCache          Whether to use cached mapping or rescan document annotations.
-     *
-     * TODO: This method should be moved to the DocumentMetadata class
-     *
-     * @return array
-     */
-    public function getClientMapping($documentClassName, $useCache = true)
-    {
-        if ($useCache && isset($this->mappings[$documentClassName])) {
-            return $this->mappings[$documentClassName];
-        }
-
-        $mappings = [];
-        foreach ($this->getMetadataFromClass($documentClassName) as $type => $metadata) {
-            if (!empty($metadata['properties'])) {
-                $mappings[$type] = array_filter(
-                    array_merge(
-                        ['properties' => $metadata['properties']],
-                        $metadata['fields']
-                    ),
-                    function ($value) {
-                        // Remove all empty non-boolean values from the mapping array
-                        return (bool) $value || is_bool($value);
-                    }
-                );
-            }
-        }
-
-        $this->mappings[$documentClassName] = $mappings;
-
-        return $this->mappings[$documentClassName];
-    }
-
-//    /**
-//     * Returns document mapping with metadata from a document object
-//     *
-//     * @param DocumentInterface $document
-//     *
-//     * @return array
-//     */
-//    public function getMetadataFromObject(DocumentInterface $document)
-//    {
-//        return $this->getDocumentReflectionMetadata(new \ReflectionObject($document));
-//    }
 
     /**
      * Returns document mapping with metadata

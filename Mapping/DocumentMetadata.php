@@ -45,6 +45,27 @@ class DocumentMetadata
     }
 
     /**
+     * Retrieves type mapping for the Elasticsearch client
+     *
+     * @return array
+     */
+    public function getClientMapping()
+    {
+        $mapping = array_filter(
+            array_merge(
+                ['properties' => $this->getProperties()],
+                $this->getFields()
+            ),
+            function ($value) {
+                // Remove all empty non-boolean values from the mapping array
+                return (bool) $value || is_bool($value);
+            }
+        );
+
+        return $mapping;
+    }
+
+    /**
      * @return array
      */
     public function getProperties()

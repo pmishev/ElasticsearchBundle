@@ -44,7 +44,7 @@ class MappingPass implements CompilerPassInterface
                     $container->getDefinition('sfes.document_metadata_collection'),
                     $container->getDefinition('sfes.provider_registry'),
                     $container->getDefinition('sfes.finder'),
-                    $this->getIndexParams($indexSettings, $container),
+                    $this->getIndexParams($indexManagerName, $indexSettings, $container),
                 ]
             );
 
@@ -62,12 +62,12 @@ class MappingPass implements CompilerPassInterface
     /**
      * Returns params for index.
      *
+     * @param string           $indexManagerName
      * @param array            $indexSettings
      * @param ContainerBuilder $container
-     *
      * @return array
      */
-    private function getIndexParams(array $indexSettings, ContainerBuilder $container)
+    private function getIndexParams($indexManagerName, array $indexSettings, ContainerBuilder $container)
     {
         $index = ['index' => $indexSettings['name']];
 
@@ -76,24 +76,12 @@ class MappingPass implements CompilerPassInterface
         }
 
         $mappings = [];
-        /** @var DocumentMetadataCollector $metadataCollector */
-        $metadataCollector = $container->get('sfes.document_metadata_collector');
-//        $paths = [];
 
-        $documentClassNames = $indexSettings['types'];
-
-        foreach ($documentClassNames as $documentClassName) {
-            $mappings = array_replace_recursive(
-                $mappings,
-                $metadataCollector->getClientMapping($documentClassName)
-            );
-//            $paths = array_replace($paths, $metadataCollector->getProxyPaths());
+        $metadataCollection = $container->get('sfes.document_metadata_collection');
+        $metadata = $metadataCollection->getDocumentsMetadataForIndex($indexManagerName);
+        foreach ($metadata as $className => $documentMetadata) {
+            $mappings[$documentMetadata->getType()] = $documentMetadata->getClientMapping();
         }
-
-//        if ($container->hasParameter('es.proxy_paths')) {
-//            $paths = array_replace($paths, $container->getParameter('es.proxy_paths'));
-//        }
-//        $container->setParameter('es.proxy_paths', $paths);
 
         if (!empty($mappings)) {
             $index['body']['mappings'] = $mappings;

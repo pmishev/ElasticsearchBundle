@@ -25,6 +25,11 @@ class DocumentParser
     /**
      * @const string
      */
+    const DOCUMENT_ANNOTATION = 'Sineflow\ElasticsearchBundle\Annotation\Document';
+
+    /**
+     * @const string
+     */
     const LANGUAGE_SEPARATOR = '-';
 
     /**
@@ -81,7 +86,7 @@ class DocumentParser
         /** @var Document $class */
         $class = $this
             ->reader
-            ->getClassAnnotation($reflectionClass, 'Sineflow\ElasticsearchBundle\Annotation\Document');
+            ->getClassAnnotation($reflectionClass, self::DOCUMENT_ANNOTATION);
 
         if ($class !== null && $class->create) {
             if ($class->parent !== null) {
