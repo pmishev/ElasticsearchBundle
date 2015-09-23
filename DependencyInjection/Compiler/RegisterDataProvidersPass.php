@@ -9,7 +9,7 @@ use Symfony\Component\DependencyInjection\Definition;
 /**
  * Registers data providers for type entities
  */
-class RegisterProvidersPass implements CompilerPassInterface
+class RegisterDataProvidersPass implements CompilerPassInterface
 {
     /**
      * Mapping of class names to booleans indicating whether the class

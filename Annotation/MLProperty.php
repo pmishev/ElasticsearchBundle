@@ -10,6 +10,9 @@ namespace Sineflow\ElasticsearchBundle\Annotation;
  */
 final class MLProperty extends AbstractProperty
 {
+    const LANGUAGE_PLACEHOLDER = '{lang}';
+    const DEFAULT_LANGUAGE_STRING = 'default';
+
     /**
      * {@inheritdoc}
      */
@@ -18,13 +21,32 @@ final class MLProperty extends AbstractProperty
         $result = parent::dump($options);
 
         if (!isset($options['language'])) {
-            throw new \InvalidArgumentException('No language specified for a multi-language property');
+            throw new \InvalidArgumentException('Language not specified');
+        }
+        if (!isset($options['indexAnalyzers'])) {
+            throw new \InvalidArgumentException('Available index analyzers missing');
         }
 
-        // Replace {lang} in any property settings
-        array_walk($result, function(&$value, $key, $language) {
-            $value = str_replace('{lang}', $language, $value);
-        }, $options['language']);
+        // Replace {lang} in any analyzers with the respective language
+        // If no analyzer is defined for a certain language, replace {lang} with 'default'
+        array_walk($result, function(&$value, $key, $options) {
+            if (in_array($key, ['analyzer', 'index_analyzer', 'search_analyzer']) && false !== strpos($value, self::LANGUAGE_PLACEHOLDER)) {
+                // Get the names of all available analyzers in the index
+                $indexAnalyzers = array_keys($options['indexAnalyzers']);
+
+                // Make sure a default analyzer is defined, even if we don't need it right now
+                // because, if a new language is added and we don't have an analyzer for it, ES mapping would fail
+                $defaultAnalyzer = str_replace(self::LANGUAGE_PLACEHOLDER, self::DEFAULT_LANGUAGE_STRING, $value);
+                if (!in_array($defaultAnalyzer, $indexAnalyzers)) {
+                    throw new \LogicException(sprintf('There must be a default language analyzer "%s" defined for index', $defaultAnalyzer));
+                }
+
+                $value = str_replace('{lang}', $options['language'], $value);
+                if (!in_array($value, $indexAnalyzers)) {
+                    $value = $defaultAnalyzer;
+                }
+            }
+        }, $options);
 
         return $result;
     }

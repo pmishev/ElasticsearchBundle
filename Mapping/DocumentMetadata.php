@@ -40,7 +40,6 @@ class DocumentMetadata
      */
     protected function configureOptions(OptionsResolver $optionsResolver)
     {
-//        $optionsResolver->setRequired(['properties', 'fields', 'aliases', 'class', 'objects']);
         $optionsResolver->setRequired(['properties', 'fields', 'aliases', 'objects', 'repositoryClass', 'className']);
     }
 

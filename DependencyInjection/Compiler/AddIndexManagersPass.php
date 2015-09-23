@@ -2,17 +2,15 @@
 
 namespace Sineflow\ElasticsearchBundle\DependencyInjection\Compiler;
 
-use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
-use Symfony\Component\DependencyInjection\Reference;
 
 /**
  * Compiles elastic search data.
  */
-class MappingPass implements CompilerPassInterface
+class AddIndexManagersPass implements CompilerPassInterface
 {
     /**
      * {@inheritdoc}

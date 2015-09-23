@@ -6,10 +6,10 @@ use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\Reader;
 use Sineflow\ElasticsearchBundle\Annotation\AbstractProperty;
 use Sineflow\ElasticsearchBundle\Annotation\Document;
-//use Sineflow\ElasticsearchBundle\Annotation\Inherit;
 use Sineflow\ElasticsearchBundle\Annotation\MLProperty;
 use Sineflow\ElasticsearchBundle\Annotation\MultiField;
-use Sineflow\ElasticsearchBundle\Annotation\Property;
+use Sineflow\ElasticsearchBundle\Document\LanguageProvider\LanguageProviderInterface;
+//use Sineflow\ElasticsearchBundle\Annotation\Inherit;
 //use Sineflow\ElasticsearchBundle\Annotation\Skip;
 
 /**
@@ -64,6 +64,11 @@ class DocumentParser
     private $properties = [];
 
     /**
+     * @var LanguageProviderInterface
+     */
+    private $languageProvider;
+
+    /**
      * @param Reader          $reader          Used for reading annotations.
      * @param DocumentLocator $documentLocator Used for resolving namespaces.
      */
@@ -75,13 +80,22 @@ class DocumentParser
     }
 
     /**
+     * @param LanguageProviderInterface $languageProvider
+     */
+    public function setLanguageProvider(LanguageProviderInterface $languageProvider)
+    {
+        $this->languageProvider = $languageProvider;
+    }
+
+    /**
      * Parses documents by used annotations and returns mapping for elasticsearch with some extra metadata.
      *
      * @param \ReflectionClass $reflectionClass
+     * @param array            $indexAnalyzers
      *
      * @return array
      */
-    public function parse(\ReflectionClass $reflectionClass)
+    public function parse(\ReflectionClass $reflectionClass, array $indexAnalyzers)
     {
         /** @var Document $class */
         $class = $this
@@ -97,19 +111,8 @@ class DocumentParser
                 $parent = null;
             }
             $type = $this->getDocumentType($reflectionClass, $class);
-            $inherit = $this->getInheritedProperties($reflectionClass);
 
-            $properties = $this->getProperties(
-                $reflectionClass,
-                array_merge($inherit, $this->getSkippedProperties($reflectionClass))
-            );
-
-            if (!empty($inherit)) {
-                $properties = array_merge(
-                    $properties,
-                    $this->getProperties($reflectionClass->getParentClass(), $inherit, true)
-                );
-            }
+            $properties = $this->getProperties($reflectionClass, $indexAnalyzers);
 
             return [
                 $type => [
@@ -309,35 +312,30 @@ class DocumentParser
      * Returns properties of reflection class.
      *
      * @param \ReflectionClass $reflectionClass Class to read properties from.
-     * @param array            $properties      Properties to skip.
-     * @param bool             $flag            If false excludes properties, true only includes properties.
+     * @param array            $indexAnalyzers
      *
      * @return array
      */
-    private function getProperties(\ReflectionClass $reflectionClass, $properties = [], $flag = false)
+    private function getProperties(\ReflectionClass $reflectionClass, array $indexAnalyzers = [])
     {
         $mapping = [];
         /** @var \ReflectionProperty $property */
         foreach ($this->getDocumentPropertiesReflection($reflectionClass) as $name => $property) {
             $propertyAnnotation = $this->getPropertyAnnotationData($property);
 
-            // TODO: where is this function called with $flag == true or with $properties set?
-            if ((in_array($name, $properties) && !$flag)
-                || (!in_array($name, $properties) && $flag)
-                || empty($propertyAnnotation)
-            ) {
+            if (empty($propertyAnnotation)) {
                 continue;
             }
 
             // If it is a multi-language property
             if ($propertyAnnotation instanceof MLProperty) {
-                // TODO: inject LanguageProvider service here somehow and get the languages from it
-                $languages = ['en', 'cn', 'tw'];
-                $defLanguage = 'en';
-                foreach ($languages as $language) {
-                    $mapping[$propertyAnnotation->name . self::LANGUAGE_SEPARATOR . $language] = $this->getPropertyMapping($propertyAnnotation, $language);
+                if (!$this->languageProvider) {
+                    throw new \InvalidArgumentException('There must be a service tagged as "sfes.language_provider" in order to use MLProperty');
                 }
-                $mapping[$propertyAnnotation->name . self::LANGUAGE_SEPARATOR . self::DEFAULT_LANG_SUFFIX] = $this->getPropertyMapping($propertyAnnotation, $defLanguage);
+                foreach ($this->languageProvider->getLanguages() as $language) {
+                    $mapping[$propertyAnnotation->name . self::LANGUAGE_SEPARATOR . $language] = $this->getPropertyMapping($propertyAnnotation, $language, $indexAnalyzers);
+                }
+                $mapping[$propertyAnnotation->name . self::LANGUAGE_SEPARATOR . self::DEFAULT_LANG_SUFFIX] = $this->getPropertyMapping($propertyAnnotation, $this->languageProvider->getDefaultLanguage(), $indexAnalyzers);
             } else {
                 $mapping[$propertyAnnotation->name] = $this->getPropertyMapping($propertyAnnotation);
             }
@@ -347,9 +345,12 @@ class DocumentParser
         return $mapping;
     }
 
-    private function getPropertyMapping(AbstractProperty $propertyAnnotation, $language = null)
+    private function getPropertyMapping(AbstractProperty $propertyAnnotation, $language = null, array $indexAnalyzers = [])
     {
-        $propertyMapping = $propertyAnnotation->dump(['language' => $language]);
+        $propertyMapping = $propertyAnnotation->dump([
+            'language' => $language,
+            'indexAnalyzers' => $indexAnalyzers
+        ]);
 
         // Object.
         if (in_array($propertyAnnotation->type, ['object', 'nested']) && !empty($propertyAnnotation->objectName)) {
