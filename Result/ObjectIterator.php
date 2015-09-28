@@ -8,9 +8,9 @@ namespace Sineflow\ElasticsearchBundle\Result;
 class ObjectIterator extends AbstractResultsIterator
 {
     /**
-     * @var array Aliases information.
+     * @var array property metadata information.
      */
-    private $alias;
+    private $propertyMetadata;
 
     /**
      * @var Converter
@@ -22,12 +22,12 @@ class ObjectIterator extends AbstractResultsIterator
      *
      * @param Converter $converter
      * @param array     $rawData
-     * @param array     $alias
+     * @param array     $propertyMetadata
      */
-    public function __construct($converter, $rawData, $alias)
+    public function __construct($converter, $rawData, $propertyMetadata)
     {
         $this->converter = $converter;
-        $this->alias = $alias;
+        $this->propertyMetadata = $propertyMetadata;
         $this->converted = [];
 
         // Alias documents to have shorter path.
@@ -41,9 +41,8 @@ class ObjectIterator extends AbstractResultsIterator
     {
         return $this->converter->assignArrayToObject(
             $rawData,
-            // new $this->alias['proxyNamespace'](),
-            new $this->alias['className'](),
-            $this->alias['aliases']
+            new $this->propertyMetadata['className'](),
+            $this->propertyMetadata['propertiesMetadata']
         );
     }
 }

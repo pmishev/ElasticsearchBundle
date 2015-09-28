@@ -54,10 +54,9 @@ class DocumentParser
     private $objects = [];
 
     /**
-     * @var array Document properties aliases.
-     * TODO: rename to PropertiesMetadata
+     * @var array Document properties metadata.
      */
-    private $aliases = [];
+    private $propertiesMetadata = [];
 
     /**
      * @var array Local cache for document properties.
@@ -122,7 +121,7 @@ class DocumentParser
                         $class->dump(),
                         ['_parent' => $parent === null ? null : ['type' => $parent]]
                     ),
-                    'aliases' => $this->getAliases($reflectionClass),
+                    'propertiesMetadata' => $this->getPropertiesMetadata($reflectionClass),
                     'objects' => $this->getObjects(),
                     'repositoryClass' => $class->repositoryClass,
                     //'namespace' => $reflectionClass->getName(), // renamed to className below
@@ -159,33 +158,33 @@ class DocumentParser
     }
 
     /**
-     * Finds aliases for every property used in document including parent classes.
+     * Finds properties metadata for every property used in document including parent classes.
      *
      * @param \ReflectionClass $reflectionClass
      *
      * @return array
      */
-    private function getAliases(\ReflectionClass $reflectionClass)
+    private function getPropertiesMetadata(\ReflectionClass $reflectionClass)
     {
         $reflectionName = $reflectionClass->getName();
-        if (array_key_exists($reflectionName, $this->aliases)) {
-            return $this->aliases[$reflectionName];
+        if (array_key_exists($reflectionName, $this->propertiesMetadata)) {
+            return $this->propertiesMetadata[$reflectionName];
         }
 
-        $alias = [];
+        $propertyMetadata = [];
         /** @var \ReflectionProperty $property */
         foreach ($this->getDocumentPropertiesReflection($reflectionClass) as $name => $property) {
             $propertyAnnotation = $this->getPropertyAnnotationData($property);
             if ($propertyAnnotation !== null) {
-                $alias[$propertyAnnotation->name] = [
+                $propertyMetadata[$propertyAnnotation->name] = [
                     'propertyName' => $name,
                     'type' => $propertyAnnotation->type,
                 ];
 
                 // If property is multilanguage
                 if ($propertyAnnotation instanceof MLProperty) {
-                    $alias[$propertyAnnotation->name] = array_merge(
-                        $alias[$propertyAnnotation->name],
+                    $propertyMetadata[$propertyAnnotation->name] = array_merge(
+                        $propertyMetadata[$propertyAnnotation->name],
                         [
                             'multilanguage' => true,
                         ]
@@ -198,11 +197,11 @@ class DocumentParser
                         throw new \InvalidArgumentException(sprintf('Property "%s" in %s is missing "objectName" setting', $name, $reflectionName));
                     }
                     $child = new \ReflectionClass($this->documentLocator->resolveClassName($propertyAnnotation->objectName));
-                    $alias[$propertyAnnotation->name] = array_merge(
-                        $alias[$propertyAnnotation->name],
+                    $propertyMetadata[$propertyAnnotation->name] = array_merge(
+                        $propertyMetadata[$propertyAnnotation->name],
                         [
                             'multiple' => $propertyAnnotation->multiple,
-                            'aliases' => $this->getAliases($child),
+                            'propertiesMetadata' => $this->getPropertiesMetadata($child),
                             'className' => $child->getName(),
                         ]
                     );
@@ -210,9 +209,9 @@ class DocumentParser
             }
         }
 
-        $this->aliases[$reflectionName] = $alias;
+        $this->propertiesMetadata[$reflectionName] = $propertyMetadata;
 
-        return $this->aliases[$reflectionName];
+        return $this->propertiesMetadata[$reflectionName];
     }
 
     /**

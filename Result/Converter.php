@@ -54,7 +54,7 @@ class Converter
 
         /** @var DocumentInterface $object */
         $className = $this->documentMetadata->getClassName();
-        $object = $this->assignArrayToObject($data, new $className(), $this->documentMetadata->getAliases());
+        $object = $this->assignArrayToObject($data, new $className(), $this->documentMetadata->getPropertiesMetadata());
 
         $this->setObjectFields($object, $rawData, ['_id', '_score', 'highlight', 'fields _parent', 'fields _ttl']);
 
@@ -66,14 +66,13 @@ class Converter
      *
      * @param array  $array
      * @param object $object
-     * @param array  $aliases
+     * @param array  $propertiesMetadata
      *
      * @return object
      */
-    public function assignArrayToObject(array $array, $object, array $aliases)
+    public function assignArrayToObject(array $array, $object, array $propertiesMetadata)
     {
-        // TODO: rename 'alias' to 'propertyMetadata' everywhere
-        foreach ($aliases as $esField => $propertyMetadata) {
+        foreach ($propertiesMetadata as $esField => $propertyMetadata) {
             // Skip fields from the mapping that have no value set, unless they are multilanguage fields
             if (empty($propertyMetadata['multilanguage']) && !isset($array[$esField])) {
                 continue;
@@ -103,7 +102,7 @@ class Converter
                     $objectValue = $this->assignArrayToObject(
                         $array[$esField],
                         new $propertyMetadata['className'](),
-                        $propertyMetadata['aliases']
+                        $propertyMetadata['propertiesMetadata']
                     );
                 }
 
@@ -121,14 +120,14 @@ class Converter
      * Converts object to an array.
      *
      * @param DocumentInterface $object
-     * @param array             $aliases
+     * @param array             $propertiesMetadata
      *
      * @return array
      */
-    public function convertToArray($object, $aliases = [])
+    public function convertToArray($object, $propertiesMetadata = [])
     {
-        if (empty($aliases)) {
-            $aliases = $this->documentMetadata->getAliases();
+        if (empty($propertiesMetadata)) {
+            $propertiesMetadata = $this->documentMetadata->getPropertiesMetadata();
         }
 
         $array = [];
@@ -138,29 +137,29 @@ class Converter
         }
 
         // Variable $name defined in client.
-        foreach ($aliases as $name => $alias) {
-            $value = $this->getPropertyAccessor()->getValue($object, $alias['propertyName']);
+        foreach ($propertiesMetadata as $name => $propertyMetadata) {
+            $value = $this->getPropertyAccessor()->getValue($object, $propertyMetadata['propertyName']);
 
             if (isset($value)) {
-                if (array_key_exists('aliases', $alias)) {
+                if (array_key_exists('propertiesMetadata', $propertyMetadata)) {
                     $new = [];
-                    if ($alias['multiple']) {
+                    if ($propertyMetadata['multiple']) {
                         $this->isTraversable($value);
                         foreach ($value as $item) {
-//                            $this->checkVariableType($item, [$alias['namespace'], $alias['proxyNamespace']]);
-                            $this->checkVariableType($item, [$alias['className']]);
-                            $new[] = $this->convertToArray($item, $alias['aliases']);
+//                            $this->checkVariableType($item, [$propertyMetadata['namespace'], $propertyMetadata['proxyNamespace']]);
+                            $this->checkVariableType($item, [$propertyMetadata['className']]);
+                            $new[] = $this->convertToArray($item, $propertyMetadata['propertiesMetadata']);
                         }
                     } else {
-//                        $this->checkVariableType($value, [$alias['namespace'], $alias['proxyNamespace']]);
-                        $this->checkVariableType($value, [$alias['className']]);
-                        $new = $this->convertToArray($value, $alias['aliases']);
+//                        $this->checkVariableType($value, [$propertyMetadata['namespace'], $propertyMetadata['proxyNamespace']]);
+                        $this->checkVariableType($value, [$propertyMetadata['className']]);
+                        $new = $this->convertToArray($value, $propertyMetadata['propertiesMetadata']);
                     }
                     $value = $new;
                 }
 
                 if ($value instanceof \DateTime) {
-                    $value = $value->format(isset($alias['format']) ? $alias['format'] : \DateTime::ISO8601);
+                    $value = $value->format(isset($propertyMetadata['format']) ? $propertyMetadata['format'] : \DateTime::ISO8601);
                 }
 
                 if ($value instanceof MLProperty) {
@@ -286,20 +285,6 @@ class Converter
 
         return true;
     }
-
-//    /**
-//     * Returns aliases for certain document.
-//     *
-//     * @param DocumentInterface $document
-//     *
-//     * @return array
-//     */
-//    private function getAlias($document)
-//    {
-//        $class = get_class($document);
-//
-//        return $this->documentMetadataCollection->getDocumentMetadata($class)->getAliases();
-//    }
 
     /**
      * Returns property accessor instance.
