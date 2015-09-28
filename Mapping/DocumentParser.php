@@ -34,6 +34,7 @@ class DocumentParser
 
     /**
      * @const string
+     * TODO: Move this as a bundle parameter
      */
     const DEFAULT_LANG_SUFFIX = 'default';
 
@@ -54,7 +55,7 @@ class DocumentParser
 
     /**
      * @var array Document properties aliases.
-     * TODO: can we do without these?
+     * TODO: rename to PropertiesMetadata
      */
     private $aliases = [];
 
@@ -180,8 +181,22 @@ class DocumentParser
                     'propertyName' => $name,
                     'type' => $propertyAnnotation->type,
                 ];
+
+                // If property is multilanguage
+                if ($propertyAnnotation instanceof MLProperty) {
+                    $alias[$propertyAnnotation->name] = array_merge(
+                        $alias[$propertyAnnotation->name],
+                        [
+                            'multilanguage' => true,
+                        ]
+                    );
+                }
+
                 // If property is a (nested) object
-                if ($propertyAnnotation->objectName) {
+                if (in_array($propertyAnnotation->type, ['object', 'nested'])) {
+                    if (!$propertyAnnotation->objectName) {
+                        throw new \InvalidArgumentException(sprintf('Property "%s" in %s is missing "objectName" setting', $name, $reflectionName));
+                    }
                     $child = new \ReflectionClass($this->documentLocator->resolveClassName($propertyAnnotation->objectName));
                     $alias[$propertyAnnotation->name] = array_merge(
                         $alias[$propertyAnnotation->name],
@@ -235,31 +250,31 @@ class DocumentParser
         return $class ? $this->getDocumentType($reflectionClass, $class) : null;
     }
 
-    /**
-     * @param \ReflectionClass $reflectionClass
-     *
-     * @return array
-     */
-    private function getSkippedProperties(\ReflectionClass $reflectionClass)
-    {
-        /** @var Skip $class */
-        $class = $this->reader->getClassAnnotation($reflectionClass, 'Sineflow\ElasticsearchBundle\Annotation\Skip');
-
-        return $class === null ? [] : $class->value;
-    }
-
-    /**
-     * @param \ReflectionClass $reflectionClass
-     *
-     * @return array
-     */
-    private function getInheritedProperties(\ReflectionClass $reflectionClass)
-    {
-        /** @var Inherit $class */
-        $class = $this->reader->getClassAnnotation($reflectionClass, 'Sineflow\ElasticsearchBundle\Annotation\Inherit');
-
-        return $class === null ? [] : $class->value;
-    }
+//    /**
+//     * @param \ReflectionClass $reflectionClass
+//     *
+//     * @return array
+//     */
+//    private function getSkippedProperties(\ReflectionClass $reflectionClass)
+//    {
+//        /** @var Skip $class */
+//        $class = $this->reader->getClassAnnotation($reflectionClass, 'Sineflow\ElasticsearchBundle\Annotation\Skip');
+//
+//        return $class === null ? [] : $class->value;
+//    }
+//
+//    /**
+//     * @param \ReflectionClass $reflectionClass
+//     *
+//     * @return array
+//     */
+//    private function getInheritedProperties(\ReflectionClass $reflectionClass)
+//    {
+//        /** @var Inherit $class */
+//        $class = $this->reader->getClassAnnotation($reflectionClass, 'Sineflow\ElasticsearchBundle\Annotation\Inherit');
+//
+//        return $class === null ? [] : $class->value;
+//    }
 
     /**
      * Returns document type.
@@ -329,13 +344,21 @@ class DocumentParser
 
             // If it is a multi-language property
             if ($propertyAnnotation instanceof MLProperty) {
+                if ($propertyAnnotation->type != 'string') {
+                    throw new \InvalidArgumentException(sprintf('"%s" property in %s is declared as "MLProperty", so can only be of type "string"', $propertyAnnotation->name, $reflectionClass->getName()));
+                }
                 if (!$this->languageProvider) {
                     throw new \InvalidArgumentException('There must be a service tagged as "sfes.language_provider" in order to use MLProperty');
                 }
                 foreach ($this->languageProvider->getLanguages() as $language) {
                     $mapping[$propertyAnnotation->name . self::LANGUAGE_SEPARATOR . $language] = $this->getPropertyMapping($propertyAnnotation, $language, $indexAnalyzers);
                 }
-                $mapping[$propertyAnnotation->name . self::LANGUAGE_SEPARATOR . self::DEFAULT_LANG_SUFFIX] = $this->getPropertyMapping($propertyAnnotation, $this->languageProvider->getDefaultLanguage(), $indexAnalyzers);
+                // TODO: This is a temporary hardcode. The application should decide whether it wants to use a default field at all and set its mapping on a global base (or per property?)
+                // The custom mapping from the application should be set here, using perhaps some kind of decorator
+                $mapping[$propertyAnnotation->name . self::LANGUAGE_SEPARATOR . self::DEFAULT_LANG_SUFFIX] = [
+                    'type' => 'string',
+                    'index' => 'not_analyzed'
+                ];
             } else {
                 $mapping[$propertyAnnotation->name] = $this->getPropertyMapping($propertyAnnotation);
             }

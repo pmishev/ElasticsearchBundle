@@ -3,6 +3,7 @@
 namespace Sineflow\ElasticsearchBundle\Result;
 
 use Sineflow\ElasticsearchBundle\Document\DocumentInterface;
+use Sineflow\ElasticsearchBundle\DTO\MLProperty;
 use Sineflow\ElasticsearchBundle\Mapping\ClassMetadata;
 //use ONGR\ElasticsearchBundle\Mapping\Proxy\ProxyInterface;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
@@ -14,6 +15,9 @@ use Symfony\Component\PropertyAccess\PropertyAccessor;
  */
 class Converter
 {
+    // TODO: get the '-' separator from a configuration setting of the bundle
+    const LANGUAGE_SEPARATOR = '-';
+
     /**
      * @var DocumentMetadata
      */
@@ -68,34 +72,46 @@ class Converter
      */
     public function assignArrayToObject(array $array, $object, array $aliases)
     {
-        foreach ($array as $name => $value) {
-            if (!array_key_exists($name, $aliases) || $value === null) {
-                $object->{$name} = $value;
+        // TODO: rename 'alias' to 'propertyMetadata' everywhere
+        foreach ($aliases as $esField => $propertyMetadata) {
+            // Skip fields from the mapping that have no value set, unless they are multilanguage fields
+            if (empty($propertyMetadata['multilanguage']) && !isset($array[$esField])) {
                 continue;
             }
 
-            if ($aliases[$name]['type'] === 'date') {
-                $newValue = \DateTime::createFromFormat(
-                    isset($aliases[$name]['format']) ? $aliases[$name]['format'] : \DateTime::ISO8601,
-                    $value
-                );
-                
-                $value = $newValue === false ? $value : $newValue;
-            }
+            if ($propertyMetadata['type'] === 'string' && !empty($propertyMetadata['multilanguage'])) {
+                $objectValue = new MLProperty();
+                foreach ($array as $fieldName => $value) {
+                    $prefixLength = strlen($esField . self::LANGUAGE_SEPARATOR);
+                    if (substr($fieldName, 0, $prefixLength) === $esField . self::LANGUAGE_SEPARATOR) {
+                        $language = substr($fieldName, $prefixLength);
+                        $objectValue->setValue($value, $language);
+                    }
+                }
 
-            if (array_key_exists('aliases', $aliases[$name])) {
-                if ($aliases[$name]['multiple']) {
-                    $value = new ObjectIterator($this, $value, $aliases[$name]);
+            } elseif ($propertyMetadata['type'] === 'date') {
+                $objectValue = \DateTime::createFromFormat(
+                    // TODO: is this 'format' field being set anywhere at all?
+                    isset($propertyMetadata['format']) ? $propertyMetadata['format'] : \DateTime::ISO8601,
+                    $array[$esField]
+                ) ?: $array[$esField];
+
+            } elseif (in_array($propertyMetadata['type'], ['object', 'nested'])) {
+                if ($propertyMetadata['multiple']) {
+                    $objectValue = new ObjectIterator($this, $array[$esField], $propertyMetadata);
                 } else {
-                    $value = $this->assignArrayToObject(
-                        $value,
-                        new $aliases[$name]['className'](),
-                        $aliases[$name]['aliases']
+                    $objectValue = $this->assignArrayToObject(
+                        $array[$esField],
+                        new $propertyMetadata['className'](),
+                        $propertyMetadata['aliases']
                     );
                 }
+
+            } else {
+                $objectValue = $array[$esField];
             }
 
-            $this->getPropertyAccessor()->setValue($object, $aliases[$name]['propertyName'], $value);
+            $this->getPropertyAccessor()->setValue($object, $propertyMetadata['propertyName'], $objectValue);
         }
 
         return $object;
@@ -147,7 +163,13 @@ class Converter
                     $value = $value->format(isset($alias['format']) ? $alias['format'] : \DateTime::ISO8601);
                 }
 
-                $array[$name] = $value;
+                if ($value instanceof MLProperty) {
+                    foreach ($value->getValues() as $language => $langValue) {
+                        $array[$name . self::LANGUAGE_SEPARATOR . $language] = $langValue;
+                    }
+                } else {
+                    $array[$name] = $value;
+                }
             }
         }
 

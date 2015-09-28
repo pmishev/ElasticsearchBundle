@@ -19,6 +19,7 @@ interface LanguageProviderInterface
      * Returns the default language code, which must be one of the codes returned by getLanguages()
      *
      * @return string
+     * @deprecated Default language can't be set globally, as each entity may have its own default language
      */
     public function getDefaultLanguage();
 }

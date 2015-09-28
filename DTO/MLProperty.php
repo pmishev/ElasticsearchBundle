@@ -20,7 +20,7 @@ class MLProperty
      * @param string $value
      * @param string $language
      */
-    public function set($value, $language)
+    public function setValue($value, $language)
     {
         $this->values[$language] = $value;
     }
@@ -29,8 +29,16 @@ class MLProperty
      * @param string $language
      * @return null|string
      */
-    public function get($language)
+    public function getValue($language)
     {
         return isset($this->values[$language]) ? $this->values[$language] : null;
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getValues()
+    {
+        return $this->values;
     }
 }
