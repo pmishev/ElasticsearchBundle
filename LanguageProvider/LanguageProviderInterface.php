@@ -1,6 +1,6 @@
 <?php
 
-namespace Sineflow\ElasticsearchBundle\Document\LanguageProvider;
+namespace Sineflow\ElasticsearchBundle\LanguageProvider;
 
 /**
  * Defines the interface that language providers must implement

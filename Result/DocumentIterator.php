@@ -6,7 +6,7 @@ namespace Sineflow\ElasticsearchBundle\Result;
 //use ONGR\ElasticsearchBundle\DSL\Aggregation\AbstractAggregation;
 //use ONGR\ElasticsearchBundle\Result\Aggregation\AggregationIterator;
 //use ONGR\ElasticsearchBundle\Result\Suggestion\SuggestionIterator;
-use Sineflow\ElasticsearchBundle\Mapping\IndicesAndTypesMetadataCollection;
+use Sineflow\ElasticsearchBundle\DTO\IndicesAndTypesMetadataCollection;
 
 /**
  * This class is able to iterate over Elasticsearch result documents while casting data into models.

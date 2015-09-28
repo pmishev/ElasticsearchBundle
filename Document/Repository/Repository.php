@@ -59,7 +59,7 @@ class Repository implements RepositoryInterface
         // Get the metadata of the document class managed by the repository
         $metadata = $this->getManager()->getDocumentsMetadata([$documentClass]);
         if (empty($metadata)) {
-            throw new \InvalidArgumentException(sprintf('Type "%s" is not managed by index "%s"', $documentClass, $manager->getManagerName()));
+            throw new \InvalidArgumentException(sprintf('Type "%s" is not managed by index "%s"', $documentClass, $indexManager->getManagerName()));
         }
         $this->metadata = $metadata[$documentClass];
     }

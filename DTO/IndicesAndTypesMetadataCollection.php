@@ -1,6 +1,6 @@
 <?php
 
-namespace Sineflow\ElasticsearchBundle\Mapping;
+namespace Sineflow\ElasticsearchBundle\DTO;
 
 /**
  * Class IndicesAndTypesMetadataCollection

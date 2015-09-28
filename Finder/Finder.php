@@ -5,7 +5,7 @@ use ONGR\ElasticsearchDSL\Search;
 use Sineflow\ElasticsearchBundle\Manager\ConnectionManager;
 use Sineflow\ElasticsearchBundle\Manager\IndexManagerFactory;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection;
-use Sineflow\ElasticsearchBundle\Mapping\IndicesAndTypesMetadataCollection;
+use Sineflow\ElasticsearchBundle\DTO\IndicesAndTypesMetadataCollection;
 use Sineflow\ElasticsearchBundle\Result\Converter;
 use Sineflow\ElasticsearchBundle\Result\DocumentIterator;
 

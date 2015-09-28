@@ -11,20 +11,9 @@ use Symfony\Component\PropertyAccess\PropertyAccessor;
 
 /**
  * This class converts array to document object.
- * TODO: remove the commented proxy fields stuff or make it work if it's needed
  */
 class Converter
 {
-//    /**
-//     * @var array
-//     */
-//    private $typesMapping;
-//
-//    /**
-//     * @var array
-//     */
-//    private $bundlesMapping;
-
     /**
      * @var DocumentMetadata
      */
@@ -42,8 +31,6 @@ class Converter
      */
     public function __construct(DocumentMetadata $documentMetadata)
     {
-//        $this->typesMapping = $typesMapping;
-//        $this->bundlesMapping = $bundlesMapping;
         $this->documentMetadata = $documentMetadata;
 
     }
@@ -60,16 +47,10 @@ class Converter
     public function convertToDocument($rawData)
     {
         $data = isset($rawData['_source']) ? $rawData['_source'] : array_map('reset', $rawData['fields']);
-//        $proxy = $metadata->getProxyNamespace();
 
         /** @var DocumentInterface $object */
-//        $object = $this->assignArrayToObject($data, new $proxy(), $metadata->getAliases());
         $className = $this->documentMetadata->getClassName();
         $object = $this->assignArrayToObject($data, new $className(), $this->documentMetadata->getAliases());
-
-//        if ($object instanceof ProxyInterface) {
-//            $object->__setInitialized(true);
-//        }
 
         $this->setObjectFields($object, $rawData, ['_id', '_score', 'highlight', 'fields _parent', 'fields _ttl']);
 
@@ -108,7 +89,6 @@ class Converter
                 } else {
                     $value = $this->assignArrayToObject(
                         $value,
-                        //new $aliases[$name]['proxyNamespace'](),
                         new $aliases[$name]['className'](),
                         $aliases[$name]['aliases']
                     );

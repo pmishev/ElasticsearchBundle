@@ -30,7 +30,7 @@ class RegisterLanguageProviderPass implements CompilerPassInterface
         // Make sure the class implements LanguageProviderInterface
         $providerClass = $providerDefinition->getClass();
         $reflectionClass = new \ReflectionClass($providerClass);
-        if (!$reflectionClass->implementsInterface('Sineflow\ElasticsearchBundle\Document\LanguageProvider\LanguageProviderInterface')) {
+        if (!$reflectionClass->implementsInterface('Sineflow\ElasticsearchBundle\LanguageProvider\LanguageProviderInterface')) {
             throw new \InvalidArgumentException(sprintf('Language provider "%s" must implement LanguageProviderInterface.', $providerClass));
         }
 

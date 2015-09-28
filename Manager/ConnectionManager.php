@@ -4,7 +4,7 @@ namespace Sineflow\ElasticsearchBundle\Manager;
 
 use Elasticsearch\Client;
 use Elasticsearch\Common\Exceptions\Forbidden403Exception;
-use Sineflow\ElasticsearchBundle\Structure\BulkQueryItem;
+use Sineflow\ElasticsearchBundle\DTO\BulkQueryItem;
 
 /**
  * This class interacts with elasticsearch using injected client.

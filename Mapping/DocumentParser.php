@@ -8,7 +8,7 @@ use Sineflow\ElasticsearchBundle\Annotation\AbstractProperty;
 use Sineflow\ElasticsearchBundle\Annotation\Document;
 use Sineflow\ElasticsearchBundle\Annotation\MLProperty;
 use Sineflow\ElasticsearchBundle\Annotation\MultiField;
-use Sineflow\ElasticsearchBundle\Document\LanguageProvider\LanguageProviderInterface;
+use Sineflow\ElasticsearchBundle\LanguageProvider\LanguageProviderInterface;
 //use Sineflow\ElasticsearchBundle\Annotation\Inherit;
 //use Sineflow\ElasticsearchBundle\Annotation\Skip;
 

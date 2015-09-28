@@ -1,6 +1,6 @@
 <?php
 
-namespace Sineflow\ElasticsearchBundle\Structure;
+namespace Sineflow\ElasticsearchBundle\DTO;
 
 /**
  * Class representing a query within a bulk request
