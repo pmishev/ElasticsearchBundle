@@ -126,10 +126,8 @@ class DocumentParser
                     'propertiesMetadata' => $this->getPropertiesMetadata($reflectionClass),
                     'objects' => $this->getObjects(),
                     'repositoryClass' => $class->repositoryClass,
-                    //'namespace' => $reflectionClass->getName(), // renamed to className below
                     'className' => $reflectionClass->getName(),
-                    // TODO: what do I need this for?
-                    // 'class' => $reflectionClass->getShortName(),
+                    'shortClassName' => $this->documentLocator->getShortClassName($reflectionClass->getName()),
                 ],
             ];
         }

@@ -64,7 +64,7 @@ class Converter
     }
 
     /**
-     * Assigns all properties to object.
+     * Assigns all properties to object. Could be a document or a (nested) object.
      *
      * @param array  $array
      * @param object $object
@@ -119,10 +119,10 @@ class Converter
     }
 
     /**
-     * Converts object to an array.
+     * Converts document or (nested) object to an array.
      *
-     * @param DocumentInterface $object
-     * @param array             $propertiesMetadata
+     * @param object $object
+     * @param array  $propertiesMetadata
      *
      * @return array
      */

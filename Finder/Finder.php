@@ -1,6 +1,8 @@
 <?php
 
 namespace Sineflow\ElasticsearchBundle\Finder;
+
+use Elasticsearch\Common\Exceptions\Missing404Exception;
 use ONGR\ElasticsearchDSL\Search;
 use Sineflow\ElasticsearchBundle\Manager\ConnectionManager;
 use Sineflow\ElasticsearchBundle\Manager\IndexManagerFactory;
@@ -47,6 +49,46 @@ class Finder
     }
 
     /**
+     * Returns a document by identifier
+     *
+     * @param string $documentClass In short notation (i.e AppBundle:Product)
+     * @param string $id
+     * @param int    $resultType
+     * @return mixed
+     */
+    public function get($documentClass, $id, $resultType = self::RESULTS_OBJECT)
+    {
+        $client = $this->getConnection([$documentClass])->getClient();
+
+        $allDocumentClassToIndexMappings = $this->documentMetadataCollection->getDocumentClassesIndices();
+        $indexManagerName = $allDocumentClassToIndexMappings[$documentClass];
+        $documentMetadata = $this->documentMetadataCollection->getDocumentMetadata($documentClass);
+
+        $params = [
+            'index' => $this->indexManagerFactory->get($indexManagerName)->getReadAlias(),
+            'type' => $documentMetadata->getType(),
+            'id' => $id,
+        ];
+
+        try {
+            $raw = $client->get($params);
+        } catch (Missing404Exception $e) {
+            return null;
+        }
+
+        switch ($resultType) {
+            case self::RESULTS_OBJECT:
+                return (new Converter($documentMetadata, $this->languageSeparator))->convertToDocument($raw);
+            case self::RESULTS_ARRAY:
+                return $this->convertToNormalizedArray($raw);
+            case self::RESULTS_RAW:
+                return $raw;
+            default:
+                throw new \InvalidArgumentException('Wrong result type selected');
+        }
+    }
+
+    /**
      * Executes a search and return results
      *
      * @param string[] $documentClasses
@@ -83,10 +125,11 @@ class Finder
             $types[] = $documentMetadata->getType();
         }
 
-        $params = [];
-        $params['index'] = array_unique($indices);
-        $params['type'] = $types;
-        $params['body'] = $search->toArray();
+        $params = [
+            'index' => array_unique($indices),
+            'type' => $types,
+            'body' => $search->toArray(),
+        ];
 
 //        $queryStringParams = $search->getQueryParams();
 //        if (!empty($queryStringParams)) {

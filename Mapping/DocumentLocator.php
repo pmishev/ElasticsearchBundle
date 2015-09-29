@@ -49,7 +49,7 @@ class DocumentLocator
      * Resolves document class name from short syntax.
      *
      * @param string $className Short syntax for class name (e.g AppBundle:Product)
-     * @return string
+     * @return string Fully qualified class name
      */
     public function resolveClassName($className)
     {
@@ -64,12 +64,10 @@ class DocumentLocator
     }
 
     /**
-     * Return the short name for a fully qualified document class name (e.g. AppBundle:Product)
+     * Return the short name for a fully qualified document class name
      *
-     * @param string $className
-     * @return string
-     *
-     * TODO: what's the difference between this method and the above resolveClassName ?
+     * @param string $className Fully qualified class name
+     * @return string Class name in short notation (e.g. AppBundle:Product)
      */
     public function getShortClassName($className)
     {

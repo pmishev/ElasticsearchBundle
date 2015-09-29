@@ -2,6 +2,8 @@
 
 namespace Sineflow\ElasticsearchBundle\DTO;
 
+use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
+
 /**
  * Class IndicesAndTypesMetadataCollection
  *

@@ -29,9 +29,7 @@ class ObjectIterator extends AbstractResultsIterator
         $this->converter = $converter;
         $this->propertyMetadata = $propertyMetadata;
         $this->converted = [];
-
-        // Alias documents to have shorter path.
-        $this->documents = &$rawData;
+        $this->documents = $rawData;
     }
 
     /**

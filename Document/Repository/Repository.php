@@ -14,11 +14,6 @@ use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
  */
 class Repository implements RepositoryInterface
 {
-    const RESULTS_ARRAY = 'array';
-    const RESULTS_OBJECT = 'object';
-    const RESULTS_RAW = 'raw';
-    const RESULTS_RAW_ITERATOR = 'raw_iterator';
-
     /**
      * @var IndexManager
      */
@@ -85,29 +80,13 @@ class Repository implements RepositoryInterface
      * Returns a single document data by ID or null if document is not found.
      *
      * @param string $id         Document Id to find.
-     * @param string $resultType Result type returned.
+     * @param int    $resultType Result type returned.
      *
      * @return DocumentInterface|null
      */
-    public function getById($id, $resultType = self::RESULTS_OBJECT)
+    public function getById($id, $resultType = Finder::RESULTS_OBJECT)
     {
-        $params = [
-            'index' => $this->getManager()->getReadAlias(),
-            'type' => $this->metadata->getType(),
-            'id' => $id,
-        ];
-
-        try {
-            $result = $this->getManager()->getConnection()->getClient()->get($params);
-        } catch (Missing404Exception $e) {
-            return null;
-        }
-
-        if ($resultType === self::RESULTS_OBJECT) {
-            return (new Converter($this->metadata, $this->languageSeparator))->convertToDocument($result);
-        }
-
-        return $this->parseResult($result, $resultType, '');
+        return $this->finder->get($this->metadata->getShortClassName(), $id, $resultType);
     }
 
     /**
