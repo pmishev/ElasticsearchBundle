@@ -29,14 +29,21 @@ class Finder
     private $indexManagerFactory;
 
     /**
+     * @var string
+     */
+    private $languageSeparator;
+
+    /**
      * Finder constructor.
      * @param DocumentMetadataCollection $documentMetadataCollection
      * @param IndexManagerFactory        $indexManagerFactory
+     * @param string                     $languageSeparator
      */
-    public function __construct(DocumentMetadataCollection $documentMetadataCollection, IndexManagerFactory $indexManagerFactory)
+    public function __construct(DocumentMetadataCollection $documentMetadataCollection, IndexManagerFactory $indexManagerFactory, $languageSeparator)
     {
         $this->documentMetadataCollection = $documentMetadataCollection;
         $this->indexManagerFactory = $indexManagerFactory;
+        $this->languageSeparator = $languageSeparator;
     }
 
     /**
@@ -112,7 +119,8 @@ class Finder
 
                 return new DocumentIterator(
                     $raw,
-                    $typesMetadataCollection
+                    $typesMetadataCollection,
+                    $this->languageSeparator
                 );
             case self::RESULTS_ARRAY:
                 return $this->convertToNormalizedArray($raw);

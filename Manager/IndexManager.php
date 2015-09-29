@@ -86,12 +86,18 @@ class IndexManager
     private $writeAlias = null;
 
     /**
+     * @var string The separator string between property names and language codes for ML properties
+     */
+    private $languageSeparator;
+
+    /**
      * @param string                     $managerName
      * @param ConnectionManager          $connection
      * @param DocumentMetadataCollection $metadataCollection
      * @param ProviderRegistry           $providerRegistry
      * @param Finder                     $finder
      * @param array                      $indexSettings
+     * @param string                     $languageSeparator
      */
     public function __construct(
         $managerName,
@@ -99,7 +105,8 @@ class IndexManager
         DocumentMetadataCollection $metadataCollection,
         ProviderRegistry $providerRegistry,
         Finder $finder,
-        array $indexSettings)
+        array $indexSettings,
+        $languageSeparator)
     {
         $this->managerName = $managerName;
         $this->connection = $connection;
@@ -107,6 +114,7 @@ class IndexManager
         $this->providerRegistry = $providerRegistry;
         $this->finder = $finder;
         $this->indexSettings = $indexSettings;
+        $this->languageSeparator = $languageSeparator;
 
         if (true === $this->getUseAliases()) {
             $this->readAlias = $indexSettings['index'];
@@ -194,7 +202,7 @@ class IndexManager
         }
 
         $repositoryClass = $this->metadataCollection->getDocumentMetadata($documentClass)->getRepositoryClass() ?: Repository::class;
-        $repo = new $repositoryClass($this, $documentClass, $this->finder);
+        $repo = new $repositoryClass($this, $documentClass, $this->finder, $this->languageSeparator);
 
         if (!($repo instanceof RepositoryInterface)) {
             throw new \InvalidArgumentException(sprintf('Repository "%s" must implement "%s"', $repositoryClass, RepositoryInterface::class));
@@ -569,7 +577,9 @@ class IndexManager
 
         $documentClass = get_class($document);
         $documentMetadata = $this->metadataCollection->getDocumentMetadata($documentClass);
-        $converter = isset($this->convertersCache[$documentClass]) ? $this->convertersCache[$documentClass] : new Converter($documentMetadata);
+        $converter = isset($this->convertersCache[$documentClass]) ?
+            $this->convertersCache[$documentClass] : new Converter($documentMetadata, $this->languageSeparator);
+
         $documentArray = $converter->convertToArray($document);
 
         $this->persistRaw($documentMetadata->getType(), $documentArray);

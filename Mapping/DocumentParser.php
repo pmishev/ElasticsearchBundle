@@ -29,11 +29,6 @@ class DocumentParser
 
     /**
      * @const string
-     */
-    const LANGUAGE_SEPARATOR = '-';
-
-    /**
-     * @const string
      * TODO: Move this as a bundle parameter
      */
     const DEFAULT_LANG_SUFFIX = 'default';
@@ -69,13 +64,20 @@ class DocumentParser
     private $languageProvider;
 
     /**
-     * @param Reader          $reader          Used for reading annotations.
-     * @param DocumentLocator $documentLocator Used for resolving namespaces.
+     * @var string
      */
-    public function __construct(Reader $reader, DocumentLocator $documentLocator)
+    private $languageSeparator;
+
+    /**
+     * @param Reader          $reader            Used for reading annotations.
+     * @param DocumentLocator $documentLocator   Used for resolving namespaces.
+     * @param string          $languageSeparator String separating the language code from the ML property name
+     */
+    public function __construct(Reader $reader, DocumentLocator $documentLocator, $languageSeparator)
     {
         $this->reader = $reader;
         $this->documentLocator = $documentLocator;
+        $this->languageSeparator = $languageSeparator;
         $this->registerAnnotations();
     }
 
@@ -350,11 +352,11 @@ class DocumentParser
                     throw new \InvalidArgumentException('There must be a service tagged as "sfes.language_provider" in order to use MLProperty');
                 }
                 foreach ($this->languageProvider->getLanguages() as $language) {
-                    $mapping[$propertyAnnotation->name . self::LANGUAGE_SEPARATOR . $language] = $this->getPropertyMapping($propertyAnnotation, $language, $indexAnalyzers);
+                    $mapping[$propertyAnnotation->name . $this->languageSeparator . $language] = $this->getPropertyMapping($propertyAnnotation, $language, $indexAnalyzers);
                 }
                 // TODO: This is a temporary hardcode. The application should decide whether it wants to use a default field at all and set its mapping on a global base (or per property?)
                 // The custom mapping from the application should be set here, using perhaps some kind of decorator
-                $mapping[$propertyAnnotation->name . self::LANGUAGE_SEPARATOR . self::DEFAULT_LANG_SUFFIX] = [
+                $mapping[$propertyAnnotation->name . $this->languageSeparator . self::DEFAULT_LANG_SUFFIX] = [
                     'type' => 'string',
                     'index' => 'not_analyzed'
                 ];

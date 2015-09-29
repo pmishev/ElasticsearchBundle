@@ -34,15 +34,22 @@ class DocumentIterator extends AbstractResultsIterator
 //    private $suggestions;
 
     /**
+     * @var string
+     */
+    private $languageSeparator;
+
+    /**
      * Constructor.
      *
      * @param array                             $rawData
      * @param IndicesAndTypesMetadataCollection $typesMetadataCollection
+     * @param string                            $languageSeparator
      */
-    public function __construct($rawData, IndicesAndTypesMetadataCollection $typesMetadataCollection)
+    public function __construct($rawData, IndicesAndTypesMetadataCollection $typesMetadataCollection, $languageSeparator)
     {
         $this->rawData = $rawData;
         $this->typesMetadataCollection = $typesMetadataCollection;
+        $this->languageSeparator = $languageSeparator;
 
         // Alias documents to have shorter path.
         if (isset($rawData['hits']['hits'])) {
@@ -60,7 +67,7 @@ class DocumentIterator extends AbstractResultsIterator
     protected function getConverter($index, $type)
     {
         $metadata = $this->typesMetadataCollection->getTypeMetadata($type, $index);
-        $converter = new Converter($metadata);
+        $converter = new Converter($metadata, $this->languageSeparator);
 
         return $converter;
     }

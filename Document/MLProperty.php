@@ -1,6 +1,6 @@
 <?php
 
-namespace Sineflow\ElasticsearchBundle\DTO;
+namespace Sineflow\ElasticsearchBundle\Document;
 
 /**
  * Class MLProperty

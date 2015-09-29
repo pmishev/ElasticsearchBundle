@@ -44,17 +44,24 @@ class Repository implements RepositoryInterface
     private $metadata;
 
     /**
+     * @var string
+     */
+    private $languageSeparator;
+
+    /**
      * Constructor.
      *
      * @param IndexManager $indexManager
      * @param string       $documentClass
      * @param Finder       $finder
+     * @param string       $languageSeparator
      */
-    public function __construct($indexManager, $documentClass, Finder $finder)
+    public function __construct($indexManager, $documentClass, Finder $finder, $languageSeparator)
     {
         $this->indexManager = $indexManager;
         $this->documentClass = $documentClass;
         $this->finder = $finder;
+        $this->languageSeparator = $languageSeparator;
 
         // Get the metadata of the document class managed by the repository
         $metadata = $this->getManager()->getDocumentsMetadata([$documentClass]);
@@ -97,7 +104,7 @@ class Repository implements RepositoryInterface
         }
 
         if ($resultType === self::RESULTS_OBJECT) {
-            return (new Converter($this->metadata))->convertToDocument($result);
+            return (new Converter($this->metadata, $this->languageSeparator))->convertToDocument($result);
         }
 
         return $this->parseResult($result, $resultType, '');

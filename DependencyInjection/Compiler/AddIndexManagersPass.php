@@ -43,6 +43,7 @@ class AddIndexManagersPass implements CompilerPassInterface
                     $container->getDefinition('sfes.provider_registry'),
                     $container->getDefinition('sfes.finder'),
                     $this->getIndexParams($indexManagerName, $indexSettings, $container),
+                    $container->getParameter('sfes.mlproperty.language_separator')
                 ]
             );
 

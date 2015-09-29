@@ -12,6 +12,7 @@ parameters:
     sfes.profiler.class: Sineflow\ElasticsearchBundle\Profiler\ElasticsearchProfiler
     sfes.profiler.template: SineflowElasticsearchBundle:Profiler:profiler.html.twig
     sfes.profiler_backtrace_enabled: false
+    sfes.mlproperty.language_separator: '-'
 
 services:
 #    sfes.export:
@@ -32,7 +33,7 @@ services:
 
     sfes.finder:
         class: %sfes.finder.class%
-        arguments: [@sfes.document_metadata_collection, @sfes.index_manager_factory]
+        arguments: [@sfes.document_metadata_collection, @sfes.index_manager_factory, %sfes.mlproperty.language_separator%]
 
     sfes.document_locator:
         class: %sfes.document_locator.class%
@@ -56,7 +57,7 @@ services:
 
     sfes.document_parser:
         class: %sfes.document_parser.class%
-        arguments: [@sfes.annotations.cached_reader, @sfes.document_locator]
+        arguments: [@sfes.annotations.cached_reader, @sfes.document_locator, %sfes.mlproperty.language_separator%]
         public: false
 
     sfes.document_metadata_collector:

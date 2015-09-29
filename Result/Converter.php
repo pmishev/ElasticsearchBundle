@@ -3,9 +3,8 @@
 namespace Sineflow\ElasticsearchBundle\Result;
 
 use Sineflow\ElasticsearchBundle\Document\DocumentInterface;
-use Sineflow\ElasticsearchBundle\DTO\MLProperty;
+use Sineflow\ElasticsearchBundle\Document\MLProperty;
 use Sineflow\ElasticsearchBundle\Mapping\ClassMetadata;
-//use ONGR\ElasticsearchBundle\Mapping\Proxy\ProxyInterface;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
@@ -15,9 +14,6 @@ use Symfony\Component\PropertyAccess\PropertyAccessor;
  */
 class Converter
 {
-    // TODO: get the '-' separator from a configuration setting of the bundle
-    const LANGUAGE_SEPARATOR = '-';
-
     /**
      * @var DocumentMetadata
      */
@@ -29,14 +25,20 @@ class Converter
     private $propertyAccessor;
 
     /**
+     * @var string
+     */
+    private $languageSeparator;
+
+    /**
      * Constructor.
      *
      * @param DocumentMetadata $documentMetadata
+     * @param string           $languageSeparator
      */
-    public function __construct(DocumentMetadata $documentMetadata)
+    public function __construct(DocumentMetadata $documentMetadata, $languageSeparator)
     {
         $this->documentMetadata = $documentMetadata;
-
+        $this->languageSeparator = $languageSeparator;
     }
 
     /**
@@ -81,8 +83,8 @@ class Converter
             if ($propertyMetadata['type'] === 'string' && !empty($propertyMetadata['multilanguage'])) {
                 $objectValue = new MLProperty();
                 foreach ($array as $fieldName => $value) {
-                    $prefixLength = strlen($esField . self::LANGUAGE_SEPARATOR);
-                    if (substr($fieldName, 0, $prefixLength) === $esField . self::LANGUAGE_SEPARATOR) {
+                    $prefixLength = strlen($esField . $this->languageSeparator);
+                    if (substr($fieldName, 0, $prefixLength) === $esField . $this->languageSeparator) {
                         $language = substr($fieldName, $prefixLength);
                         $objectValue->setValue($value, $language);
                     }
@@ -146,12 +148,10 @@ class Converter
                     if ($propertyMetadata['multiple']) {
                         $this->isTraversable($value);
                         foreach ($value as $item) {
-//                            $this->checkVariableType($item, [$propertyMetadata['namespace'], $propertyMetadata['proxyNamespace']]);
                             $this->checkVariableType($item, [$propertyMetadata['className']]);
                             $new[] = $this->convertToArray($item, $propertyMetadata['propertiesMetadata']);
                         }
                     } else {
-//                        $this->checkVariableType($value, [$propertyMetadata['namespace'], $propertyMetadata['proxyNamespace']]);
                         $this->checkVariableType($value, [$propertyMetadata['className']]);
                         $new = $this->convertToArray($value, $propertyMetadata['propertiesMetadata']);
                     }
@@ -164,7 +164,7 @@ class Converter
 
                 if ($value instanceof MLProperty) {
                     foreach ($value->getValues() as $language => $langValue) {
-                        $array[$name . self::LANGUAGE_SEPARATOR . $language] = $langValue;
+                        $array[$name . $this->languageSeparator . $language] = $langValue;
                     }
                 } else {
                     $array[$name] = $value;
