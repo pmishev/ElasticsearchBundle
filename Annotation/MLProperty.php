@@ -11,7 +11,9 @@ namespace Sineflow\ElasticsearchBundle\Annotation;
 final class MLProperty extends AbstractProperty
 {
     const LANGUAGE_PLACEHOLDER = '{lang}';
-    const DEFAULT_LANGUAGE_STRING = 'default';
+
+    //TODO: Move this as a bundle parameter
+    const DEFAULT_LANG_SUFFIX = 'default';
 
     /**
      * {@inheritdoc}
@@ -36,12 +38,12 @@ final class MLProperty extends AbstractProperty
 
                 // Make sure a default analyzer is defined, even if we don't need it right now
                 // because, if a new language is added and we don't have an analyzer for it, ES mapping would fail
-                $defaultAnalyzer = str_replace(self::LANGUAGE_PLACEHOLDER, self::DEFAULT_LANGUAGE_STRING, $value);
+                $defaultAnalyzer = str_replace(self::LANGUAGE_PLACEHOLDER, self::DEFAULT_LANG_SUFFIX, $value);
                 if (!in_array($defaultAnalyzer, $indexAnalyzers)) {
                     throw new \LogicException(sprintf('There must be a default language analyzer "%s" defined for index', $defaultAnalyzer));
                 }
 
-                $value = str_replace('{lang}', $options['language'], $value);
+                $value = str_replace(self::LANGUAGE_PLACEHOLDER, $options['language'], $value);
                 if (!in_array($value, $indexAnalyzers)) {
                     $value = $defaultAnalyzer;
                 }

@@ -107,6 +107,11 @@ abstract class AbstractProperty implements DumperInterface
     public $format;
 
     /**
+     * @var mixed
+     */
+    public $nullValue;
+
+    /**
      * @var array
      */
     public $raw;
@@ -117,16 +122,18 @@ abstract class AbstractProperty implements DumperInterface
     public function dump(array $options = [])
     {
         $array = array_diff_key(
+            // Remove properties with no value set
             array_filter(
                 get_object_vars($this),
                 function ($value) {
-                    return $value || is_bool($value);
+                    return !is_null($value);
                 }
             ),
+            // Remove system properties, which are not a part of the Elasticsearch mapping
             array_flip(['name', 'objectName', 'multiple'])
         );
 
-        return array_combine(
+        $result = array_combine(
             array_map(
                 function ($key) {
                     return Caser::snake($key);
@@ -135,5 +142,7 @@ abstract class AbstractProperty implements DumperInterface
             ),
             array_values($array)
         );
+
+        return $result;
     }
 }

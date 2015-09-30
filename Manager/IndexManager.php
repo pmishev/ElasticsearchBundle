@@ -630,8 +630,6 @@ class IndexManager
      *
      * @param array $documentClasses If given, only metadata for those classes will be returned
      * @return DocumentMetadata[]
-     *
-     * TODO: this was getBundlesMapping() before
      */
     public function getDocumentsMetadata(array $documentClasses = [])
     {
