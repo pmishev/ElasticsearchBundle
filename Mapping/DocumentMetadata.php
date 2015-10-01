@@ -15,11 +15,6 @@ class DocumentMetadata
     private $metadata;
 
     /**
-     * @var string
-     */
-    private $type;
-
-    /**
      * Resolves metadata.
      *
      * @param array $metadata
@@ -29,8 +24,7 @@ class DocumentMetadata
         $resolver = new OptionsResolver();
         $this->configureOptions($resolver);
 
-        $this->type = key($metadata);
-        $this->metadata = $resolver->resolve($metadata[$this->type]);
+        $this->metadata = $resolver->resolve($metadata);
     }
 
     /**
@@ -40,7 +34,7 @@ class DocumentMetadata
      */
     protected function configureOptions(OptionsResolver $optionsResolver)
     {
-        $optionsResolver->setRequired(['properties', 'fields', 'propertiesMetadata', 'objects', 'repositoryClass', 'className', 'shortClassName']);
+        $optionsResolver->setRequired(['type', 'properties', 'fields', 'propertiesMetadata', 'objects', 'repositoryClass', 'className', 'shortClassName']);
     }
 
     /**
@@ -125,6 +119,6 @@ class DocumentMetadata
      */
     public function getType()
     {
-        return $this->type;
+        return $this->metadata['type'];
     }
 }

@@ -90,7 +90,7 @@ class DocumentParser
     }
 
     /**
-     * Parses documents by used annotations and returns mapping for elasticsearch with some extra metadata.
+     * Parses document by used annotations and returns mapping for elasticsearch with some extra metadata.
      *
      * @param \ReflectionClass $reflectionClass
      * @param array            $indexAnalyzers
@@ -117,18 +117,17 @@ class DocumentParser
             $properties = $this->getProperties($reflectionClass, $indexAnalyzers);
 
             return [
-                $type => [
-                    'properties' => $properties,
-                    'fields' => array_merge(
-                        $class->dump(),
-                        ['_parent' => $parent === null ? null : ['type' => $parent]]
-                    ),
-                    'propertiesMetadata' => $this->getPropertiesMetadata($reflectionClass),
-                    'objects' => $this->getObjects(),
-                    'repositoryClass' => $class->repositoryClass,
-                    'className' => $reflectionClass->getName(),
-                    'shortClassName' => $this->documentLocator->getShortClassName($reflectionClass->getName()),
-                ],
+                'type' => $type,
+                'properties' => $properties,
+                'fields' => array_merge(
+                    $class->dump(),
+                    ['_parent' => $parent === null ? null : ['type' => $parent]]
+                ),
+                'propertiesMetadata' => $this->getPropertiesMetadata($reflectionClass),
+                'objects' => $this->getObjects(),
+                'repositoryClass' => $class->repositoryClass,
+                'className' => $reflectionClass->getName(),
+                'shortClassName' => $this->documentLocator->getShortClassName($reflectionClass->getName()),
             ];
         }
 
@@ -225,8 +224,6 @@ class DocumentParser
             'Object',
             'Nested',
             'MultiField',
-//            'Inherit',
-//            'Skip',
         ];
 
         foreach ($annotations as $annotation) {
@@ -248,32 +245,6 @@ class DocumentParser
 
         return $class ? $this->getDocumentType($reflectionClass, $class) : null;
     }
-
-//    /**
-//     * @param \ReflectionClass $reflectionClass
-//     *
-//     * @return array
-//     */
-//    private function getSkippedProperties(\ReflectionClass $reflectionClass)
-//    {
-//        /** @var Skip $class */
-//        $class = $this->reader->getClassAnnotation($reflectionClass, 'Sineflow\ElasticsearchBundle\Annotation\Skip');
-//
-//        return $class === null ? [] : $class->value;
-//    }
-//
-//    /**
-//     * @param \ReflectionClass $reflectionClass
-//     *
-//     * @return array
-//     */
-//    private function getInheritedProperties(\ReflectionClass $reflectionClass)
-//    {
-//        /** @var Inherit $class */
-//        $class = $this->reader->getClassAnnotation($reflectionClass, 'Sineflow\ElasticsearchBundle\Annotation\Inherit');
-//
-//        return $class === null ? [] : $class->value;
-//    }
 
     /**
      * Returns document type.
