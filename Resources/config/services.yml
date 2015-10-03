@@ -9,6 +9,7 @@ parameters:
     sfes.document_parser.class: Sineflow\ElasticsearchBundle\Mapping\DocumentParser
     sfes.document_metadata_collector.class: Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector
     sfes.logger.collection_handler.class: Sineflow\ElasticsearchBundle\Profiler\Handler\CollectionHandler
+    sfes.connection_factory.class: Sineflow\ElasticsearchBundle\Manager\ConnectionManagerFactory
     sfes.profiler.class: Sineflow\ElasticsearchBundle\Profiler\ElasticsearchProfiler
     sfes.profiler.template: SineflowElasticsearchBundle:Profiler:profiler.html.twig
     sfes.profiler_backtrace_enabled: false
@@ -71,9 +72,23 @@ services:
 
     sfes.logger.trace:
         class: %monolog.logger.class%
-        arguments: ['trace']
+        arguments: ['sfes_trace']
         calls:
             - [pushHandler, [@sfes.logger.collection_handler]]
+
+    sfes.logger.log_handler:
+        class: %monolog.handler.rotating_file.class%
+        arguments: ["%kernel.logs_dir%/%kernel.environment%.sf_elasticsearch.log", 0, warning]
+
+    sfes.logger.log:
+        class: %monolog.logger.class%
+        arguments: ['sfes_log']
+        calls:
+            - [pushHandler, [@sfes.logger.log_handler]]
+
+    sfes.connection_factory:
+        class: %sfes.connection_factory.class%
+        arguments: [@sfes.logger.trace, @sfes.logger.log]
 
     sfes.profiler:
         class: %sfes.profiler.class%

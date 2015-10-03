@@ -23,18 +23,17 @@ class AddConnectionsPass implements CompilerPassInterface
         foreach ($connections as $connectionName => $connectionSettings) {
             $connectionName = strtolower($connectionName);
 
-            $client = new Definition(
-                'Elasticsearch\Client',
-                [
-                    $this->getClientParams($connectionSettings),
-                ]
-            );
             $connectionDefinition = new Definition(
                 'Sineflow\ElasticsearchBundle\Manager\ConnectionManager',
                 [
                     $connectionName,
-                    $client,
                     $connectionSettings,
+                ]
+            );
+            $connectionDefinition->setFactory(
+                [
+                    new Reference('sfes.connection_factory'),
+                    'createConnectionManager'
                 ]
             );
 
@@ -48,40 +47,4 @@ class AddConnectionsPass implements CompilerPassInterface
             }
         }
     }
-
-    /**
-     * Returns params for ES client.
-     *
-     * @param array            $connectionSettings
-     *
-     * @return array
-     */
-    private function getClientParams(array $connectionSettings)
-    {
-        $params = ['hosts' => $connectionSettings['hosts']];
-
-        // TODO: handle this better, maybe with OptionsResolver
-        if (!empty($connectionSettings['params']['auth'])) {
-            $params['connectionParams']['auth'] = array_values($connectionSettings['params']['auth']);
-        }
-
-        if ($connectionSettings['logging'] === true) {
-            $params['logging'] = true;
-            $params['logPath'] = $connectionSettings['log_path'];
-            $params['logLevel'] = $connectionSettings['log_level'];
-
-            // TODO: these settings don't matter when a traceObject is defined, so I need to figure out a way to use them within our custom traceObject
-            $params['tracePath'] = $connectionSettings['trace_path'];
-            $params['traceLevel'] = $connectionSettings['trace_level'];
-
-            // TODO: add support for custom logger objects
-//            $params['logObject'] = new Reference('sfes.logger.trace');
-
-            // This is necessary for the data collector, so we can show debug info in the web toolbar
-            $params['traceObject'] = new Reference('sfes.logger.trace');
-        }
-
-        return $params;
-    }
-
 }
