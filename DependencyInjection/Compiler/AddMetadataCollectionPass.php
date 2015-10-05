@@ -50,11 +50,11 @@ class AddMetadataCollectionPass implements CompilerPassInterface
 
         /** @var DocumentMetadataCollector $metaCollector */
         $metaCollector = $container->get('sfes.document_metadata_collector');
-        foreach ($indexSettings['types'] as $typeClass) {
-            $metadata = $metaCollector->getMetadataFromClass($typeClass, $indexAnalyzers);
+        foreach ($indexSettings['types'] as $documentClass) {
+            $metadata = $metaCollector->getMetadataFromClass($documentClass, $indexAnalyzers);
             $metadataDefinition = new Definition('Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata');
             $metadataDefinition->addArgument($metadata);
-            $result[$typeClass] = $metadataDefinition;
+            $result[$documentClass] = $metadataDefinition;
         }
 
         return $result;

@@ -330,7 +330,7 @@ class DocumentParser
                     'index' => 'not_analyzed'
                 ];
             } else {
-                $mapping[$propertyAnnotation->name] = $this->getPropertyMapping($propertyAnnotation);
+                $mapping[$propertyAnnotation->name] = $this->getPropertyMapping($propertyAnnotation, null, $indexAnalyzers);
             }
 
         }
@@ -347,7 +347,7 @@ class DocumentParser
 
         // Object.
         if (in_array($propertyAnnotation->type, ['object', 'nested']) && !empty($propertyAnnotation->objectName)) {
-            $propertyMapping = array_replace_recursive($propertyMapping, $this->getObjectMapping($propertyAnnotation->objectName));
+            $propertyMapping = array_replace_recursive($propertyMapping, $this->getObjectMapping($propertyAnnotation->objectName, $indexAnalyzers));
         }
 
         // MultiField.
@@ -374,10 +374,11 @@ class DocumentParser
      * Loads from cache if it's already loaded.
      *
      * @param string $objectName
+     * @param array  $indexAnalyzers
      *
      * @return array
      */
-    private function getObjectMapping($objectName)
+    private function getObjectMapping($objectName, array $indexAnalyzers = [])
     {
         $namespace = $this->documentLocator->resolveClassName($objectName);
 
@@ -385,7 +386,7 @@ class DocumentParser
             return $this->objects[$namespace];
         }
 
-        $this->objects[$namespace] = $this->getRelationMapping(new \ReflectionClass($namespace));
+        $this->objects[$namespace] = $this->getRelationMapping(new \ReflectionClass($namespace), $indexAnalyzers);
 
         return $this->objects[$namespace];
     }
@@ -394,15 +395,16 @@ class DocumentParser
      * Returns relation mapping by its reflection.
      *
      * @param \ReflectionClass $reflectionClass
+     * @param array            $indexAnalyzers
      *
      * @return array|null
      */
-    private function getRelationMapping(\ReflectionClass $reflectionClass)
+    private function getRelationMapping(\ReflectionClass $reflectionClass, $indexAnalyzers = [])
     {
         if ($this->reader->getClassAnnotation($reflectionClass, 'Sineflow\ElasticsearchBundle\Annotation\Object')
             || $this->reader->getClassAnnotation($reflectionClass, 'Sineflow\ElasticsearchBundle\Annotation\Nested')
         ) {
-            return ['properties' => $this->getProperties($reflectionClass)];
+            return ['properties' => $this->getProperties($reflectionClass, $indexAnalyzers)];
         }
 
         return null;
