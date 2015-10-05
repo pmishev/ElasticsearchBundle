@@ -3,7 +3,6 @@
 namespace Sineflow\ElasticsearchBundle\Finder;
 
 use Elasticsearch\Common\Exceptions\Missing404Exception;
-use ONGR\ElasticsearchDSL\Search;
 use Sineflow\ElasticsearchBundle\Manager\ConnectionManager;
 use Sineflow\ElasticsearchBundle\Manager\IndexManagerFactory;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection;
@@ -92,11 +91,11 @@ class Finder
      * Executes a search and return results
      *
      * @param string[] $documentClasses
-     * @param Search   $search
+     * @param array    $searchBody
      * @param int      $resultsType
      * @return mixed
      */
-    public function find(array $documentClasses, Search $search, $resultsType = self::RESULTS_OBJECT)
+    public function find(array $documentClasses, array $searchBody, $resultsType = self::RESULTS_OBJECT)
     {
         $client = $this->getConnection($documentClasses)->getClient();
 
@@ -115,6 +114,7 @@ class Finder
         }
 
         $indices = [];
+        $types = [];
         foreach ($documentClassToIndexMap as $documentClass => $indexManagerName) {
             // Build mappings of indices and types to metadata, for the Converter
             $liveIndex = $getLiveIndices ? $this->indexManagerFactory->get($indexManagerName)->getLiveIndex() : null;
@@ -128,7 +128,7 @@ class Finder
         $params = [
             'index' => array_unique($indices),
             'type' => $types,
-            'body' => $search->toArray(),
+            'body' => $searchBody,
         ];
 
 //        $queryStringParams = $search->getQueryParams();
@@ -227,7 +227,7 @@ class Finder
             $indexManagerName = $this->documentMetadataCollection->getDocumentClassIndex($documentClass);
             $indexManager = $this->indexManagerFactory->get($indexManagerName);
             if (!is_null($connection) && $indexManager->getConnection()->getConnectionName() != $connection->getConnectionName()) {
-                throw new \InvalidArgumentException(sprintf('All searched types must be in indexes within the same connection'));
+                throw new \InvalidArgumentException(sprintf('All searched types must be in indices within the same connection'));
             }
             $connection = $indexManager->getConnection();
         }
