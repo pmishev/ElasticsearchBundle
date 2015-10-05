@@ -40,8 +40,8 @@ class Configuration implements ConfigurationInterface
                     ->info("The number of requests to send at once, when doing bulk operations")
                     ->defaultValue('1000')
                 ->end()
-                ->append($this->getConnectionsNode())
-                ->append($this->getIndicesNode())
+            ->append($this->getConnectionsNode())
+            ->append($this->getIndicesNode())
             ->end();
 
         return $treeBuilder;
@@ -62,50 +62,16 @@ class Configuration implements ConfigurationInterface
         $node
             ->isRequired()
             ->requiresAtLeastOneElement()
-            ->info('Defines connections Elasticsearch clusters and their parameters.')
+            ->useAttributeAsKey('id')
+            ->info('Defines connections to Elasticsearch servers and their parameters')
             ->prototype('array')
                 ->children()
                     ->arrayNode('hosts')
                         ->info('Defines hosts to connect to.')
+                        ->isRequired()
                         ->requiresAtLeastOneElement()
-                        ->defaultValue(['127.0.0.1:9200'])
+                        ->performNoDeepMerging()
                         ->prototype('scalar')
-                            ->beforeNormalization()
-                                ->ifArray()
-                                ->then(
-                                    function ($value) {
-                                        if (!array_key_exists('host', $value)) {
-                                            throw new InvalidConfigurationException(
-                                                'Host must be configured under hosts configuration tree.'
-                                            );
-                                        }
-
-                                        return $value['host'];
-                                    }
-                                )
-                            ->end()
-                        ->end()
-                    ->end()
-                    ->arrayNode('params')
-                        ->info('Connection parameters for the Elasticsearch client')
-                        ->children()
-                            ->arrayNode('auth')
-                                ->info('Holds information for http authentication.')
-                                ->children()
-                                    ->scalarNode('username')
-                                        ->isRequired()
-                                        ->example('john')
-                                    ->end()
-                                    ->scalarNode('password')
-                                        ->isRequired()
-                                        ->example('mytopsecretpassword')
-                                    ->end()
-                                    ->scalarNode('option')
-                                        ->defaultValue('Basic')
-                                        ->info('authentication type')
-                                    ->end()
-                                ->end()
-                            ->end()
                         ->end()
                     ->end()
                     ->scalarNode('profiling')
@@ -136,6 +102,7 @@ class Configuration implements ConfigurationInterface
         $node
             ->isRequired()
             ->requiresAtLeastOneElement()
+            ->useAttributeAsKey('id')
             ->info('Defines Elasticsearch indices')
             ->prototype('array')
             ->beforeNormalization()
