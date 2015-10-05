@@ -18,6 +18,30 @@ abstract class AbstractProperty implements DumperInterface
     public $name;
 
     /**
+     * @var array<\Sineflow\ElasticsearchBundle\Annotation\MultiField>
+     */
+    public $fields;
+
+    /**
+     * @var string Object name to map.
+     */
+    public $objectName;
+
+    /**
+     * Defines if related object will have one or multiple values.
+     *
+     * @var bool OneToOne or OneToMany.
+     */
+    public $multiple;
+
+    /**
+     * Settings directly passed to Elasticsearch client as-is
+     *
+     * @var array
+     */
+    public $rawMapping;
+
+    /**
      * @var string
      *
      * @Required
@@ -57,44 +81,7 @@ abstract class AbstractProperty implements DumperInterface
     /**
      * @var bool
      */
-    public $payloads;
-
-    /**
-     * @var bool
-     */
     public $enabled;
-
-    /**
-     * @var array<\Sineflow\ElasticsearchBundle\Annotation\MultiField>
-     */
-    public $fields;
-
-    /**
-     * @var array
-     */
-    public $fieldData;
-
-    /**
-     * @var string Object name to map.
-     */
-    public $objectName;
-
-    /**
-     * Defines if related object will have one or multiple values.
-     *
-     * @var bool OneToOne or OneToMany.
-     */
-    public $multiple;
-
-    /**
-     * @var int
-     */
-    public $ignoreAbove;
-
-    /**
-     * @var bool
-     */
-    public $store;
 
     /**
      * @var string
@@ -112,11 +99,6 @@ abstract class AbstractProperty implements DumperInterface
     public $nullValue;
 
     /**
-     * @var array
-     */
-    public $raw;
-
-    /**
      * {@inheritdoc}
      */
     public function dump(array $options = [])
@@ -130,7 +112,7 @@ abstract class AbstractProperty implements DumperInterface
                 }
             ),
             // Remove system properties, which are not a part of the Elasticsearch mapping
-            array_flip(['name', 'objectName', 'multiple'])
+            array_flip(['name', 'objectName', 'multiple', 'rawMapping'])
         );
 
         $result = array_combine(

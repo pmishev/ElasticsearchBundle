@@ -104,7 +104,7 @@ class DocumentParser
             ->reader
             ->getClassAnnotation($reflectionClass, self::DOCUMENT_ANNOTATION);
 
-        if ($class !== null && $class->create) {
+        if ($class !== null) {
             if ($class->parent !== null) {
                 $parent = $this->getDocumentParentType(
                     new \ReflectionClass($this->documentLocator->resolveClassName($class->parent))
@@ -361,10 +361,8 @@ class DocumentParser
         }
 
         // Raw override.
-        if (isset($propertyMapping['raw'])) {
-            $raw = $propertyMapping['raw'];
-            unset($propertyMapping['raw']);
-            $propertyMapping = array_merge($propertyMapping, $raw);
+        if (is_array($propertyAnnotation->rawMapping)) {
+            $propertyMapping = array_merge($propertyMapping, $propertyAnnotation->rawMapping);
         }
 
         return $propertyMapping;

@@ -13,11 +13,6 @@ use Sineflow\ElasticsearchBundle\Mapping\DumperInterface;
 final class Document implements DumperInterface
 {
     /**
-     * @var bool
-     */
-    public $create = true;
-
-    /**
      * @var string
      */
     public $type;
@@ -38,19 +33,9 @@ final class Document implements DumperInterface
     public $ttl;
 
     /**
-     * @var bool
-     */
-    public $enabled;
-
-    /**
      * @var array
      */
     public $all;
-
-    /**
-     * @var string
-     */
-    public $dynamic;
 
     /**
      * @var array
@@ -75,8 +60,6 @@ final class Document implements DumperInterface
         return [
             '_ttl' => $this->ttl,
             '_all' => $this->all,
-            'enabled' => $this->enabled,
-            'dynamic' => $this->dynamic,
             'dynamic_templates' => $this->dynamicTemplates,
             'transform' => $this->transform,
             'dynamic_date_formats' => $this->dynamicDateFormats,
