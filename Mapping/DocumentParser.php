@@ -9,8 +9,6 @@ use Sineflow\ElasticsearchBundle\Annotation\Document;
 use Sineflow\ElasticsearchBundle\Annotation\MLProperty;
 use Sineflow\ElasticsearchBundle\Annotation\MultiField;
 use Sineflow\ElasticsearchBundle\LanguageProvider\LanguageProviderInterface;
-//use Sineflow\ElasticsearchBundle\Annotation\Inherit;
-//use Sineflow\ElasticsearchBundle\Annotation\Skip;
 
 /**
  * Document parser used for reading document annotations.
@@ -26,12 +24,6 @@ class DocumentParser
      * @const string
      */
     const DOCUMENT_ANNOTATION = 'Sineflow\ElasticsearchBundle\Annotation\Document';
-
-    /**
-     * @const string
-     * TODO: Move this as a bundle parameter
-     */
-    const DEFAULT_LANG_SUFFIX = 'default';
 
     /**
      * @var Reader Used to read document annotations.
@@ -325,7 +317,7 @@ class DocumentParser
                 }
                 // TODO: This is a temporary hardcode. The application should decide whether it wants to use a default field at all and set its mapping on a global base (or per property?)
                 // The custom mapping from the application should be set here, using perhaps some kind of decorator
-                $mapping[$propertyAnnotation->name . $this->languageSeparator . self::DEFAULT_LANG_SUFFIX] = [
+                $mapping[$propertyAnnotation->name . $this->languageSeparator . MLProperty::DEFAULT_LANG_SUFFIX] = [
                     'type' => 'string',
                     'index' => 'not_analyzed'
                 ];

@@ -12,7 +12,6 @@ final class MLProperty extends AbstractProperty
 {
     const LANGUAGE_PLACEHOLDER = '{lang}';
 
-    //TODO: Move this as a bundle parameter
     const DEFAULT_LANG_SUFFIX = 'default';
 
     /**

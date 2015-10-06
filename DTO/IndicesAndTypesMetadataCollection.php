@@ -12,8 +12,8 @@ use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
 class IndicesAndTypesMetadataCollection
 {
     /**
-     * <es_type|*> => [
-     *      <physical_index_name> => DocumentMetadata
+     * <physical_index_name|*> => [
+     *      <es_type> => DocumentMetadata
      *      ...
      * ]
      * ...

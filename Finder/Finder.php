@@ -93,55 +93,116 @@ class Finder
      * @param string[] $documentClasses
      * @param array    $searchBody
      * @param int      $resultsType
+     * @param array    $additionalRequestParams
      * @return mixed
      */
-    public function find(array $documentClasses, array $searchBody, $resultsType = self::RESULTS_OBJECT)
+    public function find(array $documentClasses, array $searchBody, $resultsType = self::RESULTS_OBJECT, array $additionalRequestParams = [])
     {
         $client = $this->getConnection($documentClasses)->getClient();
 
+        $indicesAndTypes = $this->getTargetIndicesAndTypes($documentClasses);
+
+        $params = array_merge($indicesAndTypes, [
+            'body' => $searchBody,
+        ]);
+
+        if (!empty($additionalRequestParams)) {
+            $params = array_merge($additionalRequestParams, $params);
+        }
+
+        $raw = $client->search($params);
+
+        return $this->parseResult($raw, $resultsType, $documentClasses);
+    }
+
+    /**
+     * Returns the number of records matching the given query
+     *
+     * @param array $documentClasses
+     * @param array $searchBody
+     * @param array $additionalRequestParams
+     * @return int
+     */
+    public function count(array $documentClasses, array $searchBody, array $additionalRequestParams = [])
+    {
+        $client = $this->getConnection($documentClasses)->getClient();
+
+        $indicesAndTypes = $this->getTargetIndicesAndTypes($documentClasses);
+
+        $params = array_merge($indicesAndTypes, [
+            'body' => $searchBody,
+        ]);
+
+        if (!empty($additionalRequestParams)) {
+            $params = array_merge($additionalRequestParams, $params);
+        }
+
+        $raw = $client->count($params);
+
+        return $raw['count'];
+
+    }
+
+    /**
+     * Returns an array with the Elasticsearch indices and types to be queried,
+     * based on the given document classes in short notation (AppBundle:Product)
+     *
+     * @param string[] $documentClasses
+     * @return array
+     */
+    public function getTargetIndicesAndTypes(array $documentClasses)
+    {
         $allDocumentClassToIndexMappings = $this->documentMetadataCollection->getDocumentClassesIndices();
         $documentClassToIndexMap = array_intersect_key($allDocumentClassToIndexMappings, array_flip($documentClasses));
-        $typesMetadataCollection = new IndicesAndTypesMetadataCollection();
-
-        $getLiveIndices = false;
-        if (self::RESULTS_OBJECT == $resultsType) {
-            $classToTypeMap = $this->documentMetadataCollection->getClassToTypeMap($documentClasses);
-            // If there are duplicate type names across the indices we're querying
-            if (count($classToTypeMap) > count(array_unique($classToTypeMap))) {
-                // We'll need to get the live index name for each type, so we can correctly map the results to the appropriate objects
-                $getLiveIndices = true;
-            }
-        }
 
         $indices = [];
         $types = [];
         foreach ($documentClassToIndexMap as $documentClass => $indexManagerName) {
-            // Build mappings of indices and types to metadata, for the Converter
-            $liveIndex = $getLiveIndices ? $this->indexManagerFactory->get($indexManagerName)->getLiveIndex() : null;
             $documentMetadata = $this->documentMetadataCollection->getDocumentMetadata($documentClass);
-            $typesMetadataCollection->setTypeMetadata($documentMetadata, $liveIndex);
 
             $indices[] = $this->indexManagerFactory->get($indexManagerName)->getReadAlias();
             $types[] = $documentMetadata->getType();
         }
 
-        $params = [
+        $result = [
             'index' => array_unique($indices),
             'type' => $types,
-            'body' => $searchBody,
         ];
 
-//        $queryStringParams = $search->getQueryParams();
-//        if (!empty($queryStringParams)) {
-//            $params = array_merge($queryStringParams, $params);
-//        }
-
-        $raw = $client->search($params);
-
-        return $this->parseResult($raw, $resultsType, $typesMetadataCollection);
+        return $result;
     }
 
-    private function parseResult($raw, $resultsType, IndicesAndTypesMetadataCollection $typesMetadataCollection)
+    /**
+     * Returns a mapping of live indices and types to the document classes in short notation that represent them
+     *
+     * @param string[] $documentClasses
+     * @return IndicesAndTypesMetadataCollection
+     */
+    private function getIndicesAndTypesMetadataCollection(array $documentClasses)
+    {
+        $allDocumentClassToIndexMappings = $this->documentMetadataCollection->getDocumentClassesIndices();
+        $documentClassToIndexMap = array_intersect_key($allDocumentClassToIndexMappings, array_flip($documentClasses));
+        $typesMetadataCollection = new IndicesAndTypesMetadataCollection();
+
+        $getLiveIndices = false;
+        $classToTypeMap = $this->documentMetadataCollection->getClassToTypeMap($documentClasses);
+        // If there are duplicate type names across the indices we're querying
+        if (count($classToTypeMap) > count(array_unique($classToTypeMap))) {
+            // We'll need to get the live index name for each type, so we can correctly map the results to the appropriate objects
+            $getLiveIndices = true;
+        }
+
+        foreach ($documentClassToIndexMap as $documentClass => $indexManagerName) {
+            // Build mappings of indices and types to metadata, for the Converter
+            $liveIndex = $getLiveIndices ? $this->indexManagerFactory->get($indexManagerName)->getLiveIndex() : null;
+            $documentMetadata = $this->documentMetadataCollection->getDocumentMetadata($documentClass);
+            $typesMetadataCollection->setTypeMetadata($documentMetadata, $liveIndex);
+        }
+
+        return $typesMetadataCollection;
+    }
+
+    private function parseResult($raw, $resultsType, array $documentClasses = null)
     {
         switch ($resultsType) {
             case self::RESULTS_OBJECT:
@@ -160,9 +221,13 @@ class Finder
 //                    return $iterator;
 //                }
 
+                if (empty($documentClasses)) {
+                    throw new \InvalidArgumentException('$documentClasses must be specified when retrieving results as objects');
+                }
+
                 return new DocumentIterator(
                     $raw,
-                    $typesMetadataCollection,
+                    $this->getIndicesAndTypesMetadataCollection($documentClasses),
                     $this->languageSeparator
                 );
             case self::RESULTS_ARRAY:

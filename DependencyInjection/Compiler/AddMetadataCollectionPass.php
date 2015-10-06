@@ -19,10 +19,28 @@ class AddMetadataCollectionPass implements CompilerPassInterface
     public function process(ContainerBuilder $container)
     {
         $documentsMetadataDefinitions = [];
+        $documentClasses = [];
+        /** @var DocumentMetadataCollector $metaCollector */
+        $metaCollector = $container->get('sfes.document_metadata_collector');
         $indices = $container->getParameter('sfes.indices');
 
         foreach ($indices as $indexManagerName => $indexSettings) {
-            $documentsMetadataDefinitions[$indexManagerName] = $this->getDocumentsMetadataDefinitions($container, $indexSettings);
+            $indexAnalyzers = isset($indexSettings['settings']['analysis']['analyzer']) ? $indexSettings['settings']['analysis']['analyzer'] : [];
+
+            // Fetches DocumentMetadata service definitions for the types within the index
+            foreach ($indexSettings['types'] as $documentClass) {
+                if (isset($documentClasses[$documentClass])) {
+                    throw new \InvalidArgumentException(
+                        sprintf('You cannot have type %s under "%s" index manager, as it is already managed by "%s" index manager',
+                            $documentClass, $indexManagerName, $documentClasses[$documentClass]
+                        ));
+                }
+                $documentClasses[$documentClass] = $indexManagerName;
+                $metadata = $metaCollector->getMetadataFromClass($documentClass, $indexAnalyzers);
+                $metadataDefinition = new Definition('Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata');
+                $metadataDefinition->addArgument($metadata);
+                $documentsMetadataDefinitions[$indexManagerName][$documentClass] = $metadataDefinition;
+            }
         }
 
         $documentsMetadataCollection = new Definition(
@@ -33,30 +51,5 @@ class AddMetadataCollectionPass implements CompilerPassInterface
             ]
         );
         $container->setDefinition('sfes.document_metadata_collection', $documentsMetadataCollection);
-    }
-
-    /**
-     * Fetches metadata service definitions for the types within an index
-     *
-     * @param ContainerBuilder $container
-     * @param array            $indexSettings
-     *
-     * @return array
-     */
-    private function getDocumentsMetadataDefinitions(ContainerBuilder $container, $indexSettings)
-    {
-        $result = [];
-        $indexAnalyzers = isset($indexSettings['settings']['analysis']['analyzer']) ? $indexSettings['settings']['analysis']['analyzer'] : [];
-
-        /** @var DocumentMetadataCollector $metaCollector */
-        $metaCollector = $container->get('sfes.document_metadata_collector');
-        foreach ($indexSettings['types'] as $documentClass) {
-            $metadata = $metaCollector->getMetadataFromClass($documentClass, $indexAnalyzers);
-            $metadataDefinition = new Definition('Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata');
-            $metadataDefinition->addArgument($metadata);
-            $result[$documentClass] = $metadataDefinition;
-        }
-
-        return $result;
     }
 }

@@ -25,6 +25,11 @@ class DocumentIterator extends AbstractResultsIterator
     private $languageSeparator;
 
     /**
+     * @var array
+     */
+    private $suggestions = [];
+
+    /**
      * Constructor.
      *
      * @param array                             $rawData
@@ -37,10 +42,22 @@ class DocumentIterator extends AbstractResultsIterator
         $this->typesMetadataCollection = $typesMetadataCollection;
         $this->languageSeparator = $languageSeparator;
 
+        if (isset($rawData['suggest'])) {
+            $this->suggestions = $rawData['suggest'];
+        }
+
         // Alias documents to have shorter path.
         if (isset($rawData['hits']['hits'])) {
             $this->documents = &$rawData['hits']['hits'];
         }
+    }
+
+    /**
+     * @return array
+     */
+    public function getSuggestions()
+    {
+        return $this->suggestions;
     }
 
     /**
