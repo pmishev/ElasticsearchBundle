@@ -21,11 +21,6 @@ class AddIndexManagersPass implements CompilerPassInterface
 
         // Go through each defined index and register a manager service for each
         foreach ($indices as $indexManagerName => $indexSettings) {
-            // Skip abstract index definitions, as they are only used as templates for real ones
-            if (isset($indexSettings['abstract']) && true === $indexSettings['abstract']) {
-                continue;
-            }
-
             // Make sure the connection service definition exists
             $connectionService = sprintf('sfes.connection.%s', $indexSettings['connection']);
             if (!$container->hasDefinition($connectionService)) {

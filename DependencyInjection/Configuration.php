@@ -42,6 +42,7 @@ class Configuration implements ConfigurationInterface
                 ->end()
             ->append($this->getConnectionsNode())
             ->append($this->getIndicesNode())
+
             ->end();
 
         return $treeBuilder;
@@ -104,35 +105,36 @@ class Configuration implements ConfigurationInterface
             ->requiresAtLeastOneElement()
             ->useAttributeAsKey('id')
             ->info('Defines Elasticsearch indices')
-            ->prototype('array')
             ->beforeNormalization()
-                ->ifTrue(function($v) {
-                    return isset($v['abstract']) && true === $v['abstract'];
-                })
-                ->then(function($v) {
-                    // Set a dummy name for abstract indices, as it is not used, but needs to pass validation
-                    $v['name'] = 'undefined';
-                    // Allow for an empty 'connection' for abstract indices
-                    if (empty($v['connection'])) {
-                        $v['connection'] = 'undefined';
+                ->always(function($v) {
+                    $templates = [];
+                    foreach ($v as $indexManager => $values) {
+                        if ($indexManager[0] == '@') {
+                            $templates[$indexManager] = $values;
+                            unset($v[$indexManager]);
+                        }
+                        if (isset($values['extends'])) {
+                            if (!isset($templates[$values['extends']])) {
+                                throw new \InvalidArgumentException(sprintf('Index manager "%s" extends "%s", but it is not defined', $indexManager, $values['extends']));
+                            }
+                            $v[$indexManager] = array_merge($templates[$values['extends']], $v[$indexManager]);
+                        }
+                        unset($v[$indexManager]['extends']);
                     }
 
                     return $v;
                 })
             ->end()
+            ->prototype('array')
                 ->children()
-                    ->booleanNode('abstract')
-                        ->defaultFalse()
-                        ->info('If true, no physical index will be associated with it. It can only be extended.')
+                    ->scalarNode('extends')
+                        ->info('Inherit the definition of another index manager')
                     ->end()
-//                    ->scalarNode('extends')
-//                        ->info('Allows inheritance of all settings of another index.')
-//                    ->end()
                     ->scalarNode('connection')
                         ->isRequired()
                         ->cannotBeEmpty()
                         ->defaultValue('default')
-                        ->info('Sets connection for index.')
+                        ->info('Sets connection for index')
                     ->end()
                     ->scalarNode('name')
                         ->info('The name of the index in Elasticsearch')
@@ -145,7 +147,7 @@ class Configuration implements ConfigurationInterface
                     ->end()
                     ->arrayNode('settings')
                         ->defaultValue([])
-                        ->info('Sets index settings.')
+                        ->info('Sets index settings')
                         ->prototype('variable')->end()
                     ->end()
                     ->arrayNode('types')

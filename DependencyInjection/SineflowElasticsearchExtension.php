@@ -34,7 +34,6 @@ class SineflowElasticsearchExtension extends Extension
     {
         $configuration = $this->getConfiguration($configs, $container);
         $config = $this->processConfiguration($configuration, $configs);
-        $this->removeAbstractIndices($config['indices']);
 
         $container->setParameter('sfes.document_dir', $config['document_dir']);
 
@@ -45,21 +44,6 @@ class SineflowElasticsearchExtension extends Extension
         $container->setParameter('sfes.indices', $config['indices']);
 
         $this->addDocumentsResource($config, $container);
-    }
-
-    /**
-     * Remove the abstract indices, which are only user as a template, from the indices list
-     *
-     * @param array $indices The indices config array
-     */
-    private function removeAbstractIndices(array &$indices)
-    {
-        foreach ($indices as $indexManagerName => $indexSettings) {
-            // Skip abstract index definitions, as they are only used as templates for real ones
-            if (isset($indexSettings['abstract']) && true === $indexSettings['abstract']) {
-                unset($indices[$indexManagerName]);
-            }
-        }
     }
 
     /**
