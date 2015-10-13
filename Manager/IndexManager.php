@@ -554,6 +554,7 @@ class IndexManager
     {
         $dataProvider = $this->getDataProvider($documentClass);
         $document = $dataProvider->getDocument($id);
+        // TODO: verify that the id of the returned document matches $id
         if (is_array($document)) {
             $documentMetadata = $this->metadataCollection->getDocumentMetadata($documentClass);
             $this->persistRaw($documentMetadata->getType(), $document);

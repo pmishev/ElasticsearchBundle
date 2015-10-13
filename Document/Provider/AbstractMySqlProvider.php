@@ -10,7 +10,7 @@ use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection;
 /**
  * Base doctrine document provider
  */
-abstract class AbstractDoctrineProvider extends AbstractProvider
+abstract class AbstractMySqlProvider extends AbstractProvider
 {
     /**
      * @var EntityManager
@@ -33,11 +33,6 @@ abstract class AbstractDoctrineProvider extends AbstractProvider
     protected $doctrineEntityName;
 
     /**
-     * @var bool How to hydrate doctrine results
-     */
-    protected $sourceDataHydration = AbstractQuery::HYDRATE_OBJECT;
-
-    /**
      * @param string                     $documentClass The type the provider is for
      * @param DocumentMetadataCollection $metadata      The metadata collection for all ES types
      * @param EntityManager              $em            The Doctrine entity manager
@@ -46,8 +41,6 @@ abstract class AbstractDoctrineProvider extends AbstractProvider
     {
         parent::__construct($documentClass, $metadata);
         $this->em = $em;
-        // TODO: Doesn't seem to do anything, but just in case...
-        $this->em->getConnection()->getConfiguration()->setSQLLogger(null);
     }
 
     /**
@@ -61,9 +54,16 @@ abstract class AbstractDoctrineProvider extends AbstractProvider
     /**
      * Gets the query that will return all records from the DB
      *
-     * @return Query
+     * @return string
      */
     abstract public function getQuery();
+
+    /**
+     * Gets the params for the query
+     *
+     * @return array
+     */
+    abstract public function getParams();
 
     /**
      * @param mixed $entity A doctrine entity object or data array
@@ -81,7 +81,15 @@ abstract class AbstractDoctrineProvider extends AbstractProvider
     {
         set_time_limit(3600);
 
-        $query = $this->getQuery();
+        $sql = $this->getQuery();
+        $params = $this->getParams();
+
+        $stmt = $this->em->getConnection()->prepare($sql);
+        $stmt->execute($params);
+
+
+
+
 
         $offset = 0;
         $query->setMaxResults($this->batchSize);
@@ -89,10 +97,7 @@ abstract class AbstractDoctrineProvider extends AbstractProvider
             // Get a batch of records
             $query->setFirstResult($offset);
 
-            $records = $query->getResult($this->sourceDataHydration);
-
-            $this->em->clear();
-            gc_collect_cycles();
+            $records = $stmt->fetchAll();
 
             // Convert each to an ES entity and return it
             foreach ($records as $record) {
