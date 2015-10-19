@@ -4,7 +4,9 @@ namespace Sineflow\ElasticsearchBundle\Manager;
 
 use Elasticsearch\Client;
 use Elasticsearch\Common\Exceptions\Forbidden403Exception;
+use Psr\Log\LoggerInterface;
 use Sineflow\ElasticsearchBundle\DTO\BulkQueryItem;
+use Sineflow\ElasticsearchBundle\Exception\BulkRequestException;
 
 /**
  * This class interacts with elasticsearch using injected client.
@@ -41,6 +43,10 @@ class ConnectionManager
      */
     private $cachedAliasIndices = [];
 
+    /**
+     * @var LoggerInterface
+     */
+    private $logger = null;
 
     /**
      * Construct.
@@ -56,6 +62,22 @@ class ConnectionManager
         $this->connectionSettings = $connectionSettings;
         $this->bulkQueries = [];
         $this->bulkParams = [];
+    }
+
+    /**
+     * @param LoggerInterface $logger
+     */
+    public function setLogger(LoggerInterface $logger)
+    {
+        $this->logger = $logger;
+    }
+
+    /**
+     * @return LoggerInterface|null
+     */
+    public function getLogger()
+    {
+        return $this->logger;
     }
 
     /**
@@ -143,17 +165,46 @@ class ConnectionManager
         }
 
         $bulkRequest = array_merge($bulkRequest, $this->bulkParams);
+
         $response = $this->getClient()->bulk($bulkRequest);
-
-        if ($response['errors']) {
-            // TODO: get the failed items from the bulk request (any response other than 200 or 201) and trigger an event with them to be handled in the app
-
-        }
         if ($forceRefresh) {
             $this->refresh();
         }
 
         $this->bulkQueries = [];
+
+        if ($response['errors']) {
+            $errorCount = $this->logBulkRequestErrors($response['items']);
+            $e = new BulkRequestException(sprintf('Bulk request failed with %s error(s)', $errorCount));
+            $e->setBulkResponseItems($response['items']);
+            throw $e;
+        }
+    }
+
+    /**
+     * Logs errors from a bulk request and return their count
+     *
+     * @param array $responseItems bulk response items
+     * @return int The errors count
+     */
+    private function logBulkRequestErrors($responseItems)
+    {
+        $errorsCount = 0;
+        foreach ($responseItems as $responseItem) {
+            // Get the first element of the response item (its key could be one of index/create/delete/update)
+            $action = key($responseItem);
+            $actionResult = reset($responseItem);
+
+            // If there was an error on that item (other than a missing document)
+            if (!empty($actionResult['error'])) {
+                $errorsCount++;
+                if ($this->logger) {
+                    $this->logger->error(sprintf('Bulk %s item failed', $action), $actionResult);
+                }
+            }
+        }
+
+        return $errorsCount;
     }
 
     /**
@@ -196,6 +247,44 @@ class ConnectionManager
         return $aliases;
     }
 
+    /**
+     * Check whether all of the specified indexes/aliases exist in the ES server
+     *
+     * NOTE: This is a workaround function to the native indices()->exists() function of the ES client
+     * because the latter generates warnings in the log file when index/alias does not exist
+     * @see https://github.com/elasticsearch/elasticsearch-php/issues/163
+     *
+     * $params['index'] = (list) A comma-separated list of indices/aliases to check (Required)
+     * @param array $params Associative array of parameters
+     * @return bool
+     * @throws \InvalidArgumentException
+     */
+    public function existsIndexOrAlias(array $params)
+    {
+        if (!isset($params['index'])) {
+            throw new \InvalidArgumentException('Required parameter "index" missing');
+        }
+
+        $indicesAndAliasesToCheck = array_flip(explode(',', $params['index']));
+
+        // Get all available indices with their aliases
+        $allAliases = $this->getClient()->indices()->getAliases();
+        foreach ($allAliases as $index => $data) {
+            if (isset($indicesAndAliasesToCheck[$index])) {
+                unset($indicesAndAliasesToCheck[$index]);
+            }
+            foreach ($data['aliases'] as $alias => $_nothing) {
+                if (isset($indicesAndAliasesToCheck[$alias])) {
+                    unset($indicesAndAliasesToCheck[$alias]);
+                }
+            }
+            if (empty($indicesAndAliasesToCheck)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
 //    /**
 //     * Puts mapping into elasticsearch client.

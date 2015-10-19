@@ -36,10 +36,6 @@ class Configuration implements ConfigurationInterface
                     ->info("Sets directory name from which documents will be loaded from bundles.'Document' by default")
                     ->defaultValue('Document')
                 ->end()
-                ->scalarNode('bulk_batch_size')
-                    ->info("The number of requests to send at once, when doing bulk operations")
-                    ->defaultValue('1000')
-                ->end()
             ->append($this->getConnectionsNode())
             ->append($this->getIndicesNode())
 
@@ -82,6 +78,10 @@ class Configuration implements ConfigurationInterface
                     ->scalarNode('logging')
                         ->defaultTrue()
                         ->info('Enable/disable logging.')
+                    ->end()
+                    ->scalarNode('bulk_batch_size')
+                        ->defaultValue(1000)
+                        ->info('The number of requests to send at once, when doing bulk operations')
                     ->end()
 
                 ->end()

@@ -56,6 +56,8 @@ class ConnectionManagerFactory
             $connectionSettings
         );
 
+        $connectionManager->setLogger($this->logger);
+
         return $connectionManager;
     }
 }

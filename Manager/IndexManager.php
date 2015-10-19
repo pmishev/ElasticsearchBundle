@@ -10,6 +10,7 @@ use Sineflow\ElasticsearchBundle\Document\Repository\RepositoryInterface;
 use Sineflow\ElasticsearchBundle\Event\ElasticsearchCommitEvent;
 use Sineflow\ElasticsearchBundle\Event\ElasticsearchPersistEvent;
 use Sineflow\ElasticsearchBundle\Event\Events;
+use Sineflow\ElasticsearchBundle\Exception\BulkRequestException;
 use Sineflow\ElasticsearchBundle\Exception\Exception;
 use Sineflow\ElasticsearchBundle\Exception\IndexRebuildingException;
 use Sineflow\ElasticsearchBundle\Exception\NoReadAliasException;
@@ -246,7 +247,8 @@ class IndexManager
         $indexName = $baseName = $this->getBaseIndexName() . '_' . date('YmdHis');
 
         $i = 1;
-        while ($this->getConnection()->getClient()->indices()->exists(array('index' => $indexName))) {
+        // Keep trying other names until there is no such existing index or alias
+        while ($this->getConnection()->existsIndexOrAlias(array('index' => $indexName))) {
             $indexName = $baseName . '_' . $i;
             $i++;
         }
@@ -447,6 +449,8 @@ class IndexManager
      */
     public function rebuildIndex()
     {
+        $batchSize = $this->connection->getConnectionSettings()['bulk_batch_size'];
+
         if (false === $this->getUseAliases()) {
             throw new \Exception('Index rebuilding is not supported, unless you use aliases');
         }
@@ -467,81 +471,102 @@ class IndexManager
         $newIndex = $this->getUniqueIndexName();
         $settings['index'] = $newIndex;
         $this->getConnection()->getClient()->indices()->create($settings);
-        // Point write alias to the new index as well
-        $setAliasParams = [
-            'body' => [
-                'actions' => [
-                    [
-                        'add' => [
-                            'index' => $newIndex,
-                            'alias' => $this->writeAlias
-                        ],
-                    ]
+
+        try {
+            // Point write alias to the new index as well
+            $setAliasParams = [
+                'body' => [
+                    'actions' => [
+                        [
+                            'add' => [
+                                'index' => $newIndex,
+                                'alias' => $this->writeAlias
+                            ],
+                        ]
+                    ],
                 ],
-            ],
-        ];
-        $this->getConnection()->getClient()->indices()->updateAliases($setAliasParams);
+            ];
+            $this->getConnection()->getClient()->indices()->updateAliases($setAliasParams);
 
-        // Temporarily override the write alias with the new physical index name, so rebuilding only happens in the new index
-        $originalWriteAlias = $this->writeAlias;
-        $this->setWriteAlias($settings['index']);
+            // Temporarily override the write alias with the new physical index name, so rebuilding only happens in the new index
+            $originalWriteAlias = $this->writeAlias;
+            $this->setWriteAlias($settings['index']);
 
-        // Get and cycle all types for the index
-        $indexDocumentsMetadata = $this->metadataCollection->getDocumentsMetadataForIndex($this->managerName);
-        $documentClasses = array_keys($indexDocumentsMetadata);
-        foreach ($documentClasses as $documentClass) {
-            $typeDataProvider = $this->getDataProvider($documentClass);
-            $i = 1;
-            foreach ($typeDataProvider->getDocuments() as $document) {
-                if (is_array($document)) {
-                    $documentMetadata = $indexDocumentsMetadata[$documentClass];
-                    $this->persistRaw($documentMetadata->getType(), $document);
-                } else {
-                    $this->persist($document);
+            // Get and cycle all types for the index
+            $indexDocumentsMetadata = $this->metadataCollection->getDocumentsMetadataForIndex($this->managerName);
+            $documentClasses = array_keys($indexDocumentsMetadata);
+
+            foreach ($documentClasses as $documentClass) {
+                $typeDataProvider = $this->getDataProvider($documentClass);
+                $i = 1;
+                foreach ($typeDataProvider->getDocuments() as $document) {
+                    if (is_array($document)) {
+                        $documentMetadata = $indexDocumentsMetadata[$documentClass];
+                        $this->persistRaw($documentMetadata->getType(), $document);
+                    } else {
+                        $this->persist($document);
+                    }
+                    // Send the bulk request every X documents, so it doesn't get too big
+                    if ($i % $batchSize == 0) {
+                        $this->commit();
+                    }
+                    $i++;
                 }
-                // Send the bulk request every 1000 documents, so it doesn't get too big
-                if ($i % 1000 == 0) {
-                    $this->commit();
-                }
-                $i++;
             }
-        }
-        // Save any remaining documents to ES
-        $this->commit();
+            // Save any remaining documents to ES
+            $this->commit();
 
-        // Restore write alias name
-        $this->setWriteAlias($originalWriteAlias);
+            // Restore write alias name
+            $this->setWriteAlias($originalWriteAlias);
 
-        // Point both aliases to the new index and remove them from the old
-        $setAliasParams = [
-            'body' => [
-                'actions' => [
-                    [
-                        'add' => [
-                            'index' => $newIndex,
-                            'alias' => $this->readAlias
+            // Point both aliases to the new index and remove them from the old
+            $setAliasParams = [
+                'body' => [
+                    'actions' => [
+                        [
+                            'add' => [
+                                'index' => $newIndex,
+                                'alias' => $this->readAlias
+                            ],
                         ],
+                        [
+                            'remove' => [
+                                'index' => $oldIndex,
+                                'alias' => $this->readAlias
+                            ],
+                        ],
+                        [
+                            'remove' => [
+                                'index' => $oldIndex,
+                                'alias' => $this->writeAlias
+                            ],
+                        ]
                     ],
-                    [
-                        'remove' => [
-                            'index' => $oldIndex,
-                            'alias' => $this->readAlias
-                        ],
-                    ],
-                    [
-                        'remove' => [
-                            'index' => $oldIndex,
-                            'alias' => $this->writeAlias
-                        ],
-                    ]
                 ],
-            ],
-        ];
-        $this->getConnection()->getClient()->indices()->updateAliases($setAliasParams);
+            ];
+            $this->getConnection()->getClient()->indices()->updateAliases($setAliasParams);
 
-        // Delete the old index
-        // TODO: only delete if there were no errors or warnings in the bulk requests
-        $this->getConnection()->getClient()->indices()->delete(['index' => $oldIndex]);
+            // Delete the old index
+            $this->getConnection()->getClient()->indices()->delete(['index' => $oldIndex]);
+            if ($this->getConnection()->getLogger()) {
+                $this->getConnection()->getLogger()->info(sprintf('Deleted old index %s', $oldIndex));
+            }
+
+        } catch (\Exception $e) {
+            // Bulk exceptions are logged in the connection manager, so only log other exceptions here
+            if (!($e instanceof BulkRequestException) && $this->getConnection()->getLogger()) {
+                $this->getConnection()->getLogger()->error($e->getMessage());
+            }
+
+            // Try to delete the new incomplete index
+            $this->getConnection()->getClient()->indices()->delete(['index' => $newIndex]);
+            if ($this->getConnection()->getLogger()) {
+                $this->getConnection()->getLogger()->info(sprintf('Deleted incomplete index %s', $newIndex));
+            }
+
+            // Rethrow exception to be further handled
+            throw $e;
+        }
     }
 
     /**
