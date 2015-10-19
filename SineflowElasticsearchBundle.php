@@ -30,15 +30,4 @@ class SineflowElasticsearchBundle extends Bundle
         $container->addCompilerPass(new AddIndexManagersPass());
         $container->addCompilerPass(new RegisterDataProvidersPass());
     }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function boot()
-    {
-//        if ($this->container->hasParameter('es.proxy_paths')) {
-//            $loader = new MapClassLoader($this->container->getParameter('es.proxy_paths'));
-//            $loader->register();
-//        }
-    }
 }
