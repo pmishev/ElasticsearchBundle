@@ -268,11 +268,11 @@ class Finder
 
         if (isset($data['hits']['hits'][0]['_source'])) {
             foreach ($data['hits']['hits'] as $item) {
-                $output[] = $item['_source'];
+                $output[$item['_id']] = $item['_source'];
             }
         } elseif (isset($data['hits']['hits'][0]['fields'])) {
             foreach ($data['hits']['hits'] as $item) {
-                $output[] = array_map('reset', $item['fields']);
+                $output[$item['_id']] = array_map('reset', $item['fields']);
             }
         }
 

@@ -443,11 +443,11 @@ class IndexManager
     }
 
     /**
-     * Rebuilds ES Index and deletes the old one
+     * Rebuilds ES Index and deletes the old one,
      *
      * @throws \Exception
      */
-    public function rebuildIndex()
+    public function rebuildIndex($deleteOld = false)
     {
         $batchSize = $this->connection->getConnectionSettings()['bulk_batch_size'];
 
@@ -547,9 +547,11 @@ class IndexManager
             $this->getConnection()->getClient()->indices()->updateAliases($setAliasParams);
 
             // Delete the old index
-            $this->getConnection()->getClient()->indices()->delete(['index' => $oldIndex]);
-            if ($this->getConnection()->getLogger()) {
-                $this->getConnection()->getLogger()->info(sprintf('Deleted old index %s', $oldIndex));
+            if ($deleteOld) {
+                $this->getConnection()->getClient()->indices()->delete(['index' => $oldIndex]);
+                if ($this->getConnection()->getLogger()) {
+                    $this->getConnection()->getLogger()->info(sprintf('Deleted old index %s', $oldIndex));
+                }
             }
 
         } catch (\Exception $e) {

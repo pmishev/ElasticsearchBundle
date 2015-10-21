@@ -22,11 +22,18 @@ class ConnectionManagerFactory
     private $tracer;
 
     /**
+     * @var boolean
+     */
+    private $kernelDebug;
+
+    /**
+     * @param boolean         $kernelDebug
      * @param LoggerInterface $tracer
      * @param LoggerInterface $logger
      */
-    public function __construct(LoggerInterface $tracer = null, LoggerInterface $logger = null)
+    public function __construct($kernelDebug, LoggerInterface $tracer = null, LoggerInterface $logger = null)
     {
+        $this->kernelDebug = $kernelDebug;
         $this->tracer = $tracer;
         $this->logger = $logger;
     }
@@ -42,7 +49,7 @@ class ConnectionManagerFactory
 
         $clientBuilder->setHosts($connectionSettings['hosts']);
 
-        if ($this->tracer && $connectionSettings['profiling']) {
+        if ($this->tracer && $connectionSettings['profiling'] && $this->kernelDebug) {
             $clientBuilder->setTracer($this->tracer);
         }
 

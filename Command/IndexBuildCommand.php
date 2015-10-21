@@ -21,7 +21,13 @@ class IndexBuildCommand extends AbstractManagerAwareCommand
 
         $this
             ->setName('sineflow:es:index:build')
-            ->setDescription('(Re)builds elasticsearch index.');
+            ->setDescription('(Re)builds elasticsearch index.')
+            ->addOption(
+                'delete-old',
+                null,
+                InputOption::VALUE_NONE,
+                'If set, the old index will be deleted upon successful rebuilding'
+            );
     }
 
     /**
@@ -32,8 +38,16 @@ class IndexBuildCommand extends AbstractManagerAwareCommand
         $indexManagerName = $input->getArgument('index');
         /** @var IndexManager $indexManager */
         $indexManager = $this->getManager($indexManagerName);
+
+        if ($input->getOption('delete-old')) {
+            $deleteOldIndex = true;
+        } else {
+            $deleteOldIndex = false;
+        }
+
+
         try {
-            $indexManager->rebuildIndex();
+            $indexManager->rebuildIndex($deleteOldIndex);
             $output->writeln(
                 sprintf(
                     '<info>Built index for "</info><comment>%s</comment><info>"</info>',
