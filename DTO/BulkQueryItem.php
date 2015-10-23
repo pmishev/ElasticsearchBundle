@@ -2,6 +2,8 @@
 
 namespace Sineflow\ElasticsearchBundle\DTO;
 
+use Elasticsearch\Common\Exceptions\InvalidArgumentException;
+
 /**
  * Class representing a query within a bulk request
  */
@@ -52,7 +54,7 @@ class BulkQueryItem
     public function __construct($operation, $index, $type, array $query)
     {
         if (!in_array($operation, ['index', 'create', 'update', 'delete'])) {
-            throw new \InvalidArgumentException('Wrong bulk operation selected');
+            throw new InvalidArgumentException('Wrong bulk operation selected');
         }
 
         $this->operation = $operation;

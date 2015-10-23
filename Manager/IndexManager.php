@@ -261,7 +261,7 @@ class IndexManager
      *
      * @param bool $putWarmers Determines if warmers should be loaded.
      * @param bool $noMapping  Determines if mapping should be included.
-     * @throw \Exception
+     * @throws Exception
      */
     public function createIndex($putWarmers = false, $noMapping = false)
     {
@@ -273,13 +273,11 @@ class IndexManager
 
         if (true === $this->getUseAliases()) {
             // Make sure the read and write aliases do not exist already as aliases or physical indices
-            $indexOrAliasExists = $this->getConnection()->getClient()->indices()->exists(array('index' => $this->readAlias));
-            if ($indexOrAliasExists) {
-                throw new \RuntimeException(sprintf('Read alias "%s" already exists as an alias or an index', $this->readAlias));
+            if ($this->getConnection()->existsIndexOrAlias(array('index' => $this->readAlias))) {
+                throw new Exception(sprintf('Read alias "%s" already exists as an alias or an index', $this->readAlias));
             }
-            $indexOrAliasExists = $this->getConnection()->getClient()->indices()->exists(array('index' => $this->writeAlias));
-            if ($indexOrAliasExists) {
-                throw new \RuntimeException(sprintf('Write alias "%s" already exists as an alias or an index', $this->writeAlias));
+            if ($this->getConnection()->existsIndexOrAlias(array('index' => $this->writeAlias))) {
+                throw new Exception(sprintf('Write alias "%s" already exists as an alias or an index', $this->writeAlias));
             }
 
             // Create physical index with a unique name
@@ -309,9 +307,8 @@ class IndexManager
 
         } else {
             // Make sure the index name does not exist already as a physical index or alias
-            $indexOrAliasExists = $this->getConnection()->getClient()->indices()->exists(array('index' => $this->getBaseIndexName()));
-            if ($indexOrAliasExists) {
-                throw new \RuntimeException(sprintf('Index "%s" already exists as an alias or an index', $this->getBaseIndexName()));
+            if ($this->getConnection()->existsIndexOrAlias(array('index' => $this->getBaseIndexName()))) {
+                throw new Exception(sprintf('Index "%s" already exists as an alias or an index', $this->getBaseIndexName()));
             }
             $this->getConnection()->getClient()->indices()->create($settings);
         }
@@ -342,7 +339,7 @@ class IndexManager
      * Returns the live physical index name
      *
      * @return string
-     * @throws \RuntimeException If live index is not found
+     * @throws Exception If live index is not found
      */
     public function getLiveIndex()
     {
@@ -352,48 +349,18 @@ class IndexManager
         $indices = $this->getConnection()->getClient()->indices();
 
         if (true === $this->getUseAliases()) {
-            if ($indices->existsAlias(['name' => $this->readAlias])) {
+            if ($this->getConnection()->existsAlias(['name' => $this->readAlias])) {
                 $indexName = key($indices->getAlias(['name' => $this->readAlias]));
             }
         } else {
             $indexName = $this->getBaseIndexName();
         }
 
-        if (!$indexName || !$indices->exists(['index' => $indexName])) {
-            throw new \RuntimeException('Live index not found');
+        if (!$indexName || !$this->getConnection()->existsIndexOrAlias(['index' => $indexName])) {
+            throw new Exception('Live index not found');
         }
 
         return $indexName;
-    }
-
-    /**
-     * Checks if the index exists and has its read and write aliases attached to it (if using aliases)
-     *
-     * @return bool
-     *
-     * @deprecated Use verifyIndexAndAliasesState instead
-     */
-    public function indexExists()
-    {
-        $result = false;
-
-        $indices = $this->getConnection()->getClient()->indices();
-        if (true === $this->getUseAliases()) {
-            // Check if we have a read and write alias pointing to the same index
-            if ($indices->existsAlias(['name' => $this->readAlias])) {
-                $readAliasIndices = array_keys($indices->getAlias(['name' => $this->readAlias]));
-                if ($indices->existsAlias(['name' => $this->writeAlias])) {
-                    $writeAliasIndices = array_keys($indices->getAlias(['name' => $this->writeAlias]));
-                }
-                if (!empty(array_intersect($readAliasIndices, $writeAliasIndices))) {
-                    $result = true;
-                }
-            }
-        } else {
-            $result = $indices->exists(['index' => $this->getBaseIndexName()]);
-        }
-
-        return $result;
     }
 
     /**
@@ -406,7 +373,7 @@ class IndexManager
     {
         if (false === $this->getUseAliases()) {
             // Check that the index exists
-            if (!$this->getConnection()->getClient()->indices()->exists(['index' => $this->getBaseIndexName()])) {
+            if (!$this->getConnection()->existsIndexOrAlias(['index' => $this->getBaseIndexName()])) {
                 throw new Exception(sprintf('Index "%s" does not exist', $this->getBaseIndexName()));
             }
         } else {
@@ -445,34 +412,35 @@ class IndexManager
     /**
      * Rebuilds ES Index and deletes the old one,
      *
-     * @throws \Exception
+     * @param bool $deleteOld If set, the old index will be deleted upon successful rebuilding
+     * @throws Exception
      */
     public function rebuildIndex($deleteOld = false)
     {
         $batchSize = $this->connection->getConnectionSettings()['bulk_batch_size'];
 
-        if (false === $this->getUseAliases()) {
-            throw new \Exception('Index rebuilding is not supported, unless you use aliases');
-        }
-
         try {
-            // Make sure the index and both aliases are properly set
-            $this->verifyIndexAndAliasesState();
-        } catch (NoReadAliasException $e) {
-            // Looks like the index doesn't exist, so try to create an empty one
-            $this->createIndex();
-            // Now again make sure that everything is setup correctly
-            $this->verifyIndexAndAliasesState();
-        }
+            if (false === $this->getUseAliases()) {
+                throw new Exception('Index rebuilding is not supported, unless you use aliases');
+            }
 
-        // Create a new index
-        $settings = $this->indexSettings;
-        $oldIndex = $this->getLiveIndex();
-        $newIndex = $this->getUniqueIndexName();
-        $settings['index'] = $newIndex;
-        $this->getConnection()->getClient()->indices()->create($settings);
+            try {
+                // Make sure the index and both aliases are properly set
+                $this->verifyIndexAndAliasesState();
+            } catch (NoReadAliasException $e) {
+                // Looks like the index doesn't exist, so try to create an empty one
+                $this->createIndex();
+                // Now again make sure that everything is setup correctly
+                $this->verifyIndexAndAliasesState();
+            }
 
-        try {
+            // Create a new index
+            $settings = $this->indexSettings;
+            $oldIndex = $this->getLiveIndex();
+            $newIndex = $this->getUniqueIndexName();
+            $settings['index'] = $newIndex;
+            $this->getConnection()->getClient()->indices()->create($settings);
+
             // Point write alias to the new index as well
             $setAliasParams = [
                 'body' => [
@@ -549,22 +517,18 @@ class IndexManager
             // Delete the old index
             if ($deleteOld) {
                 $this->getConnection()->getClient()->indices()->delete(['index' => $oldIndex]);
-                if ($this->getConnection()->getLogger()) {
-                    $this->getConnection()->getLogger()->info(sprintf('Deleted old index %s', $oldIndex));
-                }
+                $this->getConnection()->getLogger()->notice(sprintf('Deleted old index %s', $oldIndex));
             }
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Bulk exceptions are logged in the connection manager, so only log other exceptions here
-            if (!($e instanceof BulkRequestException) && $this->getConnection()->getLogger()) {
+            if (!($e instanceof BulkRequestException)) {
                 $this->getConnection()->getLogger()->error($e->getMessage());
             }
 
             // Try to delete the new incomplete index
             $this->getConnection()->getClient()->indices()->delete(['index' => $newIndex]);
-            if ($this->getConnection()->getLogger()) {
-                $this->getConnection()->getLogger()->info(sprintf('Deleted incomplete index %s', $newIndex));
-            }
+            $this->getConnection()->getLogger()->notice(sprintf('Deleted incomplete index "%s"', $newIndex));
 
             // Rethrow exception to be further handled
             throw $e;

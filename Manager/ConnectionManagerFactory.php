@@ -4,6 +4,7 @@ namespace Sineflow\ElasticsearchBundle\Manager;
 
 use Elasticsearch\ClientBuilder;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 /**
  * Elasticsearch connection factory class
@@ -63,7 +64,7 @@ class ConnectionManagerFactory
             $connectionSettings
         );
 
-        $connectionManager->setLogger($this->logger);
+        $connectionManager->setLogger($this->logger ?: new NullLogger());
 
         return $connectionManager;
     }

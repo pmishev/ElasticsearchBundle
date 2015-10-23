@@ -78,7 +78,7 @@ services:
 
     sfes.logger.log_handler:
         class: %monolog.handler.rotating_file.class%
-        arguments: ["%kernel.logs_dir%/%kernel.environment%.sf_elasticsearch.log", 0, warning]
+        arguments: ["%kernel.logs_dir%/%kernel.environment%.sf_elasticsearch.log", 0, notice]
 
     sfes.logger.log:
         class: %monolog.logger.class%

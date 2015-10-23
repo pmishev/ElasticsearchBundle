@@ -4,6 +4,7 @@ namespace Sineflow\ElasticsearchBundle\Manager;
 
 use Elasticsearch\Client;
 use Elasticsearch\Common\Exceptions\Forbidden403Exception;
+use Elasticsearch\Common\Exceptions\InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Sineflow\ElasticsearchBundle\DTO\BulkQueryItem;
 use Sineflow\ElasticsearchBundle\Exception\BulkRequestException;
@@ -112,7 +113,7 @@ class ConnectionManager
      * @param string $type      Elasticsearch type name.
      * @param array  $query     DSL to execute.
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function addBulkOperation($operation, $index, $type, array $query)
     {
@@ -198,9 +199,7 @@ class ConnectionManager
             // If there was an error on that item (other than a missing document)
             if (!empty($actionResult['error'])) {
                 $errorsCount++;
-                if ($this->logger) {
-                    $this->logger->error(sprintf('Bulk %s item failed', $action), $actionResult);
-                }
+                $this->logger->error(sprintf('Bulk %s item failed', $action), $actionResult);
             }
         }
 
@@ -257,12 +256,12 @@ class ConnectionManager
      * $params['index'] = (list) A comma-separated list of indices/aliases to check (Required)
      * @param array $params Associative array of parameters
      * @return bool
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function existsIndexOrAlias(array $params)
     {
         if (!isset($params['index'])) {
-            throw new \InvalidArgumentException('Required parameter "index" missing');
+            throw new InvalidArgumentException('Required parameter "index" missing');
         }
 
         $indicesAndAliasesToCheck = array_flip(explode(',', $params['index']));
@@ -280,6 +279,41 @@ class ConnectionManager
             }
             if (empty($indicesAndAliasesToCheck)) {
                 return true;
+            }
+        }
+
+        return false;
+    }
+
+
+    /**
+     * Check whether any of the specified index aliases exists in the ES server
+     *
+     * NOTE: This is a workaround function to the native indices()->existsAlias() function of the ES client
+     * because the latter generates warnings in the log file when alias does not exists
+     * When this is fixed, we should revert back to using the ES client's function, not this one
+     * @see https://github.com/elasticsearch/elasticsearch-php/issues/163
+     *
+     * @param array $params
+     * $params['name']               = (list) A comma-separated list of alias names to return (Required)
+     * @return bool
+     * @throws InvalidArgumentException
+     */
+    public function existsAlias(array $params)
+    {
+        if (!isset($params['name'])) {
+            throw new InvalidArgumentException('Required parameter "name" missing');
+        }
+
+        $aliasesToCheck = explode(',', $params['name']);
+
+        // Get all available indexes with their aliases
+        $allAliases = $this->getClient()->indices()->getAliases();
+        foreach ($allAliases as $index => $data) {
+            foreach ($aliasesToCheck as $aliasToCheck) {
+                if (isset($data['aliases'][$aliasToCheck])) {
+                    return true;
+                }
             }
         }
 
