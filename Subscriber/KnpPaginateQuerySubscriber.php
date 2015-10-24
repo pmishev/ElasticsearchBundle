@@ -1,0 +1,75 @@
+<?php
+
+namespace Sineflow\ElasticsearchBundle\Subscriber;
+
+use Knp\Component\Pager\Event\ItemsEvent;
+use Sineflow\ElasticsearchBundle\Paginator\KnpPaginatorAdapter;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
+
+/**
+ * Subscriber to paginate Elasticsearch query for KNP paginator
+ */
+class KnpPaginateQuerySubscriber implements EventSubscriberInterface
+{
+    /**
+     * @var RequestStack
+     */
+    private $requestStack;
+
+    /**
+     * @param RequestStack $requestStack
+     */
+    public function __construct(RequestStack $requestStack)
+    {
+        $this->requestStack = $requestStack;
+    }
+
+    /**
+     * @param ItemsEvent $event
+     */
+    public function items(ItemsEvent $event)
+    {
+        if ($event->target instanceof KnpPaginatorAdapter) {
+            // Add sort to query
+            list($sortField, $sortDirection) = $this->getSorting($event);
+            /** @var $results PartialResultsInterface */
+            $results = $event->target->getResults($event->getOffset(), $event->getLimit(), $sortField, $sortDirection);
+            $event->count = $event->target->getTotalHits();
+            $event->items = $results;
+            $event->stopPropagation();
+        }
+    }
+
+    /**
+     * Get and validate the KNP sorting params
+     *
+     * @param ItemsEvent $event
+     * @return array
+     */
+    protected function getSorting(ItemsEvent $event)
+    {
+        $request = $this->requestStack->getCurrentRequest();
+
+        $sortField = $request->get($event->options['sortFieldParameterName']);
+        $sortDirection = $request->get($event->options['sortDirectionParameterName']);
+        $sortDirection = ('desc' === strtolower($sortDirection)) ? 'desc' : 'asc';
+
+        // check if the requested sort field is in the sort whitelist
+        if (isset($event->options['sortFieldWhitelist']) && !in_array($sortField, $event->options['sortFieldWhitelist'])) {
+            throw new \UnexpectedValueException(sprintf('Cannot sort by [%s] as it is not in the whitelist', $sortField));
+        }
+
+        return [$sortField, $sortDirection];
+    }
+
+    /**
+     * @return array
+     */
+    public static function getSubscribedEvents()
+    {
+        return array(
+            'knp_pager.items' => array('items', 1),
+        );
+    }
+}

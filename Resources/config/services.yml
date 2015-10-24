@@ -2,7 +2,7 @@ parameters:
     sfes.provider_registry.class: Sineflow\ElasticsearchBundle\Document\Provider\ProviderRegistry
     sfes.index_manager_factory.class: Sineflow\ElasticsearchBundle\Manager\IndexManagerFactory
     sfes.finder.class: Sineflow\ElasticsearchBundle\Finder\Finder
-#    sfes.logging.path: %kernel.logs_dir%/elasticsearch_%kernel.environment%.log
+    sfes.logging.path: "%kernel.logs_dir%/%kernel.environment%.sf_elasticsearch.log"
 #    sfes.export.class: ONGR\ElasticsearchBundle\Service\ExportService
 #    sfes.import.class: ONGR\ElasticsearchBundle\Service\ImportService
     sfes.document_locator.class: Sineflow\ElasticsearchBundle\Mapping\DocumentLocator
@@ -14,6 +14,7 @@ parameters:
     sfes.profiler.template: SineflowElasticsearchBundle:Profiler:profiler.html.twig
     sfes.profiler_backtrace_enabled: false
     sfes.mlproperty.language_separator: '-'
+    sfes.knp_paginate_query_subscriber_class: Sineflow\ElasticsearchBundle\Subscriber\KnpPaginateQuerySubscriber
 
 services:
 #    sfes.export:
@@ -78,7 +79,7 @@ services:
 
     sfes.logger.log_handler:
         class: %monolog.handler.rotating_file.class%
-        arguments: ["%kernel.logs_dir%/%kernel.environment%.sf_elasticsearch.log", 0, notice]
+        arguments: [%sfes.logging.path%, 0, notice]
 
     sfes.logger.log:
         class: %monolog.logger.class%
@@ -97,3 +98,9 @@ services:
             - [addLogger, [@sfes.logger.trace]]
         tags:
             - {name: data_collector, template: %sfes.profiler.template%, id: sfes}
+
+    sfes.subscriber.knp_paginate_query_subscriber:
+        class: %sfes.knp_paginate_query_subscriber_class%
+        arguments: [@request_stack]
+        tags:
+            - { name: knp_paginator.subscriber }

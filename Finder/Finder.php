@@ -7,6 +7,7 @@ use Sineflow\ElasticsearchBundle\Manager\ConnectionManager;
 use Sineflow\ElasticsearchBundle\Manager\IndexManagerFactory;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection;
 use Sineflow\ElasticsearchBundle\DTO\IndicesAndTypesMetadataCollection;
+use Sineflow\ElasticsearchBundle\Paginator\KnpPaginatorAdapter;
 use Sineflow\ElasticsearchBundle\Result\Converter;
 use Sineflow\ElasticsearchBundle\Result\DocumentIterator;
 
@@ -15,9 +16,13 @@ use Sineflow\ElasticsearchBundle\Result\DocumentIterator;
  */
 class Finder
 {
+    const BITMASK_RESULT_TYPES = 63;
     const RESULTS_ARRAY = 1;
     const RESULTS_OBJECT = 2;
-    const RESULTS_RAW = 3;
+    const RESULTS_RAW = 4;
+
+    const BITMASK_RESULT_ADAPTERS = 64;
+    const ADAPTER_KNP = 64;
 
     /**
      * @var DocumentMetadataCollection
@@ -75,7 +80,7 @@ class Finder
             return null;
         }
 
-        switch ($resultType) {
+        switch ($resultType & self::BITMASK_RESULT_TYPES) {
             case self::RESULTS_OBJECT:
                 return (new Converter($documentMetadata, $this->languageSeparator))->convertToDocument($raw);
             case self::RESULTS_ARRAY:
@@ -90,14 +95,19 @@ class Finder
     /**
      * Executes a search and return results
      *
-     * @param string[] $documentClasses
-     * @param array    $searchBody
-     * @param int      $resultsType
-     * @param array    $additionalRequestParams
+     * @param string[] $documentClasses         The ES entities to search in
+     * @param array    $searchBody              The body of the search request
+     * @param int      $resultsType             Bitmask value determining how the results are returned
+     * @param array    $additionalRequestParams Additional params to pass to the ES client's search() method
+     * @param int      $totalHits               The total hits of the query response
      * @return mixed
      */
-    public function find(array $documentClasses, array $searchBody, $resultsType = self::RESULTS_OBJECT, array $additionalRequestParams = [])
+    public function find(array $documentClasses, array $searchBody, $resultsType = self::RESULTS_OBJECT, array $additionalRequestParams = [], &$totalHits = null)
     {
+        if (($resultsType & self::BITMASK_RESULT_ADAPTERS) === self::ADAPTER_KNP) {
+            return new KnpPaginatorAdapter($this, $documentClasses, $searchBody, $resultsType, $additionalRequestParams);
+        }
+
         $client = $this->getConnection($documentClasses)->getClient();
 
         $indicesAndTypes = $this->getTargetIndicesAndTypes($documentClasses);
@@ -111,6 +121,8 @@ class Finder
         }
 
         $raw = $client->search($params);
+
+        $totalHits = $raw['hits']['total'];
 
         return $this->parseResult($raw, $resultsType, $documentClasses);
     }
@@ -204,7 +216,7 @@ class Finder
 
     private function parseResult($raw, $resultsType, array $documentClasses = null)
     {
-        switch ($resultsType) {
+        switch ($resultsType & self::BITMASK_RESULT_TYPES) {
             case self::RESULTS_OBJECT:
                 // TODO: add the DocumentScanIterator
 //                if (isset($raw['_scroll_id'])) {
