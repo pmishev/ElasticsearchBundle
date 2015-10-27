@@ -29,7 +29,8 @@
         "phpunit/phpunit": "~4.4"
     },
     "suggest": {
-        "monolog/monolog": "Allows for client-level logging and tracing"
+        "monolog/monolog": "Allows for client-level logging and tracing",
+        "knplabs/knp-paginator-bundle": "Allows for search results to be paginated"
     },
     "autoload": {
         "psr-4": { "Sineflow\\ElasticsearchBundle\\": "" }

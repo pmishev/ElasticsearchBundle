@@ -527,8 +527,10 @@ class IndexManager
             }
 
             // Try to delete the new incomplete index
-            $this->getConnection()->getClient()->indices()->delete(['index' => $newIndex]);
-            $this->getConnection()->getLogger()->notice(sprintf('Deleted incomplete index "%s"', $newIndex));
+            if (isset($newIndex)) {
+                $this->getConnection()->getClient()->indices()->delete(['index' => $newIndex]);
+                $this->getConnection()->getLogger()->notice(sprintf('Deleted incomplete index "%s"', $newIndex));
+            }
 
             // Rethrow exception to be further handled
             throw $e;
