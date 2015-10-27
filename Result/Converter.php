@@ -58,7 +58,7 @@ class Converter
         $className = $this->documentMetadata->getClassName();
         $object = $this->assignArrayToObject($data, new $className(), $this->documentMetadata->getPropertiesMetadata());
 
-        $this->setObjectFields($object, $rawData, ['_id', '_score', 'highlight', 'fields _parent', 'fields _ttl']);
+        $this->setObjectFields($object, $rawData, ['_id', '_score', 'fields _parent', 'fields _ttl']);
 
         return $object;
     }
@@ -189,10 +189,6 @@ class Converter
             $value = $this->getPropertyAccessor()->getValue($rawResponse, $path);
 
             if ($value !== null) {
-                if (strpos($path, 'highlight') !== false) {
-                    $value = new DocumentHighlight($value);
-                }
-
                 $this->getPropertyAccessor()->setValue($object, $this->getPropertyToAccess($field), $value);
             }
         }

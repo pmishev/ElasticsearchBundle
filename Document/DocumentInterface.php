@@ -2,8 +2,6 @@
 
 namespace Sineflow\ElasticsearchBundle\Document;
 
-use Sineflow\ElasticsearchBundle\Result\DocumentHighlight;
-
 /**
  * Interface for ES Documents.
  */
@@ -79,20 +77,4 @@ interface DocumentInterface
      * @return int
      */
     public function getTtl();
-
-    /**
-     * Returns highlight.
-     *
-     * @throws \UnderflowException
-     *
-     * @return DocumentHighlight
-     */
-    public function getHighlight();
-
-    /**
-     * Sets highlight.
-     *
-     * @param DocumentHighlight $highlight
-     */
-    public function setHighlight(DocumentHighlight $highlight);
 }
