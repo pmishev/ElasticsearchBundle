@@ -24,12 +24,12 @@ class Repository implements RepositoryInterface
      *
      * @var string
      */
-    private $documentClass;
+    protected $documentClass;
 
     /**
      * @var Finder
      */
-    private $finder;
+    protected $finder;
 
     /**
      * The type metadata
