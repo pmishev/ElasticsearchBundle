@@ -5,7 +5,7 @@ namespace Sineflow\ElasticsearchBundle\Document\Provider;
 use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Query;
-use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection;
+use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
 
 /**
  * Base doctrine document provider
@@ -38,16 +38,14 @@ abstract class AbstractDoctrineProvider extends AbstractProvider
     protected $sourceDataHydration = AbstractQuery::HYDRATE_OBJECT;
 
     /**
-     * @param string                     $documentClass The type the provider is for
-     * @param DocumentMetadataCollection $metadata      The metadata collection for all ES types
-     * @param EntityManager              $em            The Doctrine entity manager
+     * @param string                    $documentClass     The type the provider is for
+     * @param DocumentMetadataCollector $metadataCollector The metadata collector
+     * @param EntityManager             $em                The Doctrine entity manager
      */
-    public function __construct($documentClass, DocumentMetadataCollection $metadata, EntityManager $em)
+    public function __construct($documentClass, DocumentMetadataCollector $metadataCollector, EntityManager $em)
     {
-        parent::__construct($documentClass, $metadata);
+        parent::__construct($documentClass, $metadataCollector);
         $this->em = $em;
-        // TODO: Doesn't seem to do anything, but just in case...
-        $this->em->getConnection()->getConfiguration()->setSQLLogger(null);
     }
 
     /**

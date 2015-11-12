@@ -3,7 +3,7 @@
 namespace Sineflow\ElasticsearchBundle\Document\Provider;
 
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
-use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection;
+use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
 
 /**
  * Base document provider
@@ -11,9 +11,9 @@ use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection;
 abstract class AbstractProvider implements ProviderInterface
 {
     /**
-     * @var DocumentMetadataCollection
+     * @var DocumentMetadataCollector
      */
-    private $metadataCollection;
+    protected $metadataCollector;
 
     /**
      * @var string The type the provider is for
@@ -21,12 +21,12 @@ abstract class AbstractProvider implements ProviderInterface
     private $documentClass;
 
     /**
-     * @param string                     $documentClass The type the provider is for
-     * @param DocumentMetadataCollection $metadata      The metadata collection for all ES types
+     * @param string                    $documentClass     The type the provider is for
+     * @param DocumentMetadataCollector $metadataCollector The metadata collector
      */
-    public function __construct($documentClass, DocumentMetadataCollection $metadata)
+    public function __construct($documentClass, DocumentMetadataCollector $metadataCollector)
     {
-        $this->metadataCollection = $metadata;
+        $this->metadataCollector = $metadataCollector;
         $this->documentClass = $documentClass;
     }
 
@@ -39,19 +39,11 @@ abstract class AbstractProvider implements ProviderInterface
     }
 
     /**
-     * @return DocumentMetadataCollection
-     */
-    protected function getMetadataCollection()
-    {
-        return $this->metadataCollection;
-    }
-
-    /**
      * @return DocumentMetadata The metadata for the ES type the provider is for
      */
     protected function getDocumentMetadata()
     {
-        return $this->metadataCollection->getDocumentMetadata($this->documentClass);
+        return $this->metadataCollector->getDocumentMetadata($this->documentClass);
     }
 
     /**

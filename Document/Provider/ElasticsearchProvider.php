@@ -3,7 +3,7 @@
 namespace Sineflow\ElasticsearchBundle\Document\Provider;
 
 use Sineflow\ElasticsearchBundle\Manager\IndexManager;
-use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection;
+use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
 
 /**
  * Class providing data from an Elasticsearch index source
@@ -31,14 +31,14 @@ class ElasticsearchProvider extends AbstractProvider
     protected $chunkSize = 500;
 
     /**
-     * @param string                     $documentClass       The type the provider is for
-     * @param DocumentMetadataCollection $metadata            The metadata collection for all ES types
-     * @param IndexManager               $sourceIndexManager  The index manager of the data source
-     * @param string                     $sourceDocumentClass The type the data is coming from
+     * @param string                    $documentClass       The type the provider is for
+     * @param DocumentMetadataCollector $metadataCollector   The metadata collector
+     * @param IndexManager              $sourceIndexManager  The index manager of the data source
+     * @param string                    $sourceDocumentClass The type the data is coming from
      */
-    public function __construct($documentClass, DocumentMetadataCollection $metadata, IndexManager $sourceIndexManager, $sourceDocumentClass)
+    public function __construct($documentClass, DocumentMetadataCollector $metadataCollector, IndexManager $sourceIndexManager, $sourceDocumentClass)
     {
-        parent::__construct($documentClass, $metadata);
+        parent::__construct($documentClass, $metadataCollector);
         $this->sourceIndexManager = $sourceIndexManager;
         $this->sourceDocumentClass = $sourceDocumentClass;
     }
@@ -56,7 +56,7 @@ class ElasticsearchProvider extends AbstractProvider
             'scroll' => $this->scrollTime,
             'size' => $this->chunkSize,
             'index' => $this->sourceIndexManager->getLiveIndex(),
-            'type' => $this->getMetadataCollection()->getDocumentMetadata($this->sourceDocumentClass)->getType()
+            'type' => $this->metadataCollector->getDocumentMetadata($this->sourceDocumentClass)->getType()
         );
 
         // Get the scroll ID
@@ -100,7 +100,7 @@ class ElasticsearchProvider extends AbstractProvider
     {
         $params = [
             'index' => $this->sourceIndexManager->getLiveIndex(),
-            'type' => $this->getMetadataCollection()->getDocumentMetadata($this->sourceDocumentClass)->getType(),
+            'type' => $this->metadataCollector->getDocumentMetadata($this->sourceDocumentClass)->getType(),
             'id' => $id
         ];
         $doc = $this->sourceIndexManager->getConnection()->getClient()->get($params);

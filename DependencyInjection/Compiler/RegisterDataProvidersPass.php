@@ -62,7 +62,7 @@ class RegisterDataProvidersPass implements CompilerPassInterface
                 'Sineflow\ElasticsearchBundle\Document\Provider\ElasticsearchProvider',
                 [
                     $documentClass,
-                    $container->getDefinition('sfes.document_metadata_collection'),
+                    $container->getDefinition('sfes.document_metadata_collector'),
                     $container->getDefinition(sprintf('sfes.index.%s', $index)),
                     $documentClass
                 ]
