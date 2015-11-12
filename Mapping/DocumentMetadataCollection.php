@@ -82,6 +82,8 @@ class DocumentMetadataCollection
      * @param string $indexManagerName
      * @return DocumentMetadata[]
      * @throws \InvalidArgumentException
+     *
+     * @deprecated Use DocumentMetadataCollector
      */
     public function getDocumentsMetadataForIndex($indexManagerName)
     {
@@ -99,6 +101,8 @@ class DocumentMetadataCollection
      *
      * @param string $documentClass
      * @return DocumentMetadata
+     *
+     * @deprecated Use DocumentMetadataCollector
      */
     public function getDocumentMetadata($documentClass)
     {

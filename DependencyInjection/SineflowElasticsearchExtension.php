@@ -63,12 +63,16 @@ class SineflowElasticsearchExtension extends Extension
                 $watchedBundles[$bundleName] = true;
             }
         }
-
         // Get the bundles' classes from the container registered bundles
         $watchedBundles = array_intersect_key(
             $container->getParameter('kernel.bundles'),
             $watchedBundles
         );
+
+        // TODO: once the metadata is no longer gathered during container compilation,
+        // figure out another way of invalidating the cache when a document in the watched bundles' document dirs is changed
+        // because it won't be the container cache that needs invalidation, but the metadata cache, which I guess would be separate
+
 
         foreach ($watchedBundles as $name => $class) {
             $bundle = new \ReflectionClass($class);

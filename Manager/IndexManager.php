@@ -13,7 +13,7 @@ use Sineflow\ElasticsearchBundle\Exception\IndexRebuildingException;
 use Sineflow\ElasticsearchBundle\Exception\NoReadAliasException;
 use Sineflow\ElasticsearchBundle\Finder\Finder;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
-use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection;
+use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
 use Sineflow\ElasticsearchBundle\Result\Converter;
 
 /**
@@ -32,9 +32,9 @@ class IndexManager
     private $connection;
 
     /**
-     * @var DocumentMetadataCollection
+     * @var DocumentMetadataCollector
      */
-    private $metadataCollection;
+    private $metadataCollector;
 
     /**
      * @var ProviderRegistry
@@ -82,18 +82,18 @@ class IndexManager
     private $languageSeparator;
 
     /**
-     * @param string                     $managerName
-     * @param ConnectionManager          $connection
-     * @param DocumentMetadataCollection $metadataCollection
-     * @param ProviderRegistry           $providerRegistry
-     * @param Finder                     $finder
-     * @param array                      $indexSettings
-     * @param string                     $languageSeparator
+     * @param string                    $managerName
+     * @param ConnectionManager         $connection
+     * @param DocumentMetadataCollector $metadataCollector
+     * @param ProviderRegistry          $providerRegistry
+     * @param Finder                    $finder
+     * @param array                     $indexSettings
+     * @param string                    $languageSeparator
      */
     public function __construct(
         $managerName,
         ConnectionManager $connection,
-        DocumentMetadataCollection $metadataCollection,
+        DocumentMetadataCollector $metadataCollector,
         ProviderRegistry $providerRegistry,
         Finder $finder,
         array $indexSettings,
@@ -101,7 +101,7 @@ class IndexManager
     {
         $this->managerName = $managerName;
         $this->connection = $connection;
-        $this->metadataCollection = $metadataCollection;
+        $this->metadataCollector = $metadataCollector;
         $this->providerRegistry = $providerRegistry;
         $this->finder = $finder;
         $this->indexSettings = $indexSettings;
@@ -184,7 +184,7 @@ class IndexManager
             return $this->repositories[$documentClass];
         }
 
-        $repositoryClass = $this->metadataCollection->getDocumentMetadata($documentClass)->getRepositoryClass() ?: Repository::class;
+        $repositoryClass = $this->metadataCollector->getDocumentMetadata($documentClass)->getRepositoryClass() ?: Repository::class;
         $repo = new $repositoryClass($this, $documentClass, $this->finder, $this->languageSeparator);
 
         if (!($repo instanceof RepositoryInterface)) {
@@ -443,7 +443,7 @@ class IndexManager
             $this->setWriteAlias($settings['index']);
 
             // Get and cycle all types for the index
-            $indexDocumentsMetadata = $this->metadataCollection->getDocumentsMetadataForIndex($this->managerName);
+            $indexDocumentsMetadata = $this->metadataCollector->getDocumentsMetadataForIndex($this->managerName);
             $documentClasses = array_keys($indexDocumentsMetadata);
 
             foreach ($documentClasses as $documentClass) {
@@ -531,7 +531,7 @@ class IndexManager
         $document = $dataProvider->getDocument($id);
         // TODO: verify that the id of the returned document matches $id
         if (is_array($document)) {
-            $documentMetadata = $this->metadataCollection->getDocumentMetadata($documentClass);
+            $documentMetadata = $this->metadataCollector->getDocumentMetadata($documentClass);
             $this->persistRaw($documentMetadata->getType(), $document);
         } else {
             $this->persist($document);
@@ -547,7 +547,7 @@ class IndexManager
     public function persist(DocumentInterface $document)
     {
         $documentClass = get_class($document);
-        $documentMetadata = $this->metadataCollection->getDocumentMetadata($documentClass);
+        $documentMetadata = $this->metadataCollector->getDocumentMetadata($documentClass);
         $converter = isset($this->convertersCache[$documentClass]) ?
             $this->convertersCache[$documentClass] : new Converter($documentMetadata, $this->languageSeparator);
 
@@ -589,7 +589,7 @@ class IndexManager
      */
     public function getDocumentsMetadata(array $documentClasses = [])
     {
-        $metadata = $this->metadataCollection->getDocumentsMetadataForIndex($this->managerName);
+        $metadata = $this->metadataCollector->getDocumentsMetadataForIndex($this->managerName);
 
         if (!empty($documentClasses)) {
             return array_intersect_key($metadata, array_flip($documentClasses));

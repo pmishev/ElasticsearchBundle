@@ -64,7 +64,7 @@ services:
 
     sfes.document_metadata_collector:
         class: %sfes.document_metadata_collector.class%
-        arguments: [@sfes.document_locator, @sfes.document_parser]
+        arguments: [%sfes.indices%, @sfes.document_locator, @sfes.document_parser]
 
     sfes.logger.collection_handler:
         class: %sfes.logger.collection_handler.class%

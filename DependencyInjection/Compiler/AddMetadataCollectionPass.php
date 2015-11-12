@@ -36,7 +36,7 @@ class AddMetadataCollectionPass implements CompilerPassInterface
                         ));
                 }
                 $documentClasses[$documentClass] = $indexManagerName;
-                $metadata = $metaCollector->getMetadataFromClass($documentClass, $indexAnalyzers);
+                $metadata = $metaCollector->fetchMetadataFromClass($documentClass, $indexAnalyzers);
                 $metadataDefinition = new Definition('Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata');
                 $metadataDefinition->addArgument($metadata);
                 $documentsMetadataDefinitions[$indexManagerName][$documentClass] = $metadataDefinition;
