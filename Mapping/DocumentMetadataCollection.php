@@ -47,6 +47,7 @@ class DocumentMetadataCollection
      * Returns all document classes in the collection as keys and the corresponding index manager that manages them as values
      *
      * @return array
+     * @deprecated Use DocumentMetadataCollector
      */
     public function getDocumentClassesIndices()
     {
@@ -65,6 +66,7 @@ class DocumentMetadataCollection
      *
      * @param string $documentClass
      * @return string
+     * @deprecated Use DocumentMetadataCollector
      */
     public function getDocumentClassIndex($documentClass)
     {
@@ -122,6 +124,7 @@ class DocumentMetadataCollection
      *
      * @param array $documentClasses Only return those classes if specified
      * @return array
+     * @deprecated Use DocumentMetadataCollector
      */
     public function getClassToTypeMap(array $documentClasses = [])
     {

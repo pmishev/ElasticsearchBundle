@@ -5,7 +5,7 @@ namespace Sineflow\ElasticsearchBundle\Finder;
 use Elasticsearch\Common\Exceptions\Missing404Exception;
 use Sineflow\ElasticsearchBundle\Manager\ConnectionManager;
 use Sineflow\ElasticsearchBundle\Manager\IndexManagerFactory;
-use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection;
+use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
 use Sineflow\ElasticsearchBundle\DTO\IndicesAndTypesMetadataCollection;
 use Sineflow\ElasticsearchBundle\Paginator\KnpPaginatorAdapter;
 use Sineflow\ElasticsearchBundle\Result\Converter;
@@ -25,9 +25,9 @@ class Finder
     const ADAPTER_KNP = 64;
 
     /**
-     * @var DocumentMetadataCollection
+     * @var DocumentMetadataCollector
      */
-    private $documentMetadataCollection;
+    private $documentMetadataCollector;
 
     /**
      * @var IndexManagerFactory
@@ -41,13 +41,13 @@ class Finder
 
     /**
      * Finder constructor.
-     * @param DocumentMetadataCollection $documentMetadataCollection
-     * @param IndexManagerFactory        $indexManagerFactory
-     * @param string                     $languageSeparator
+     * @param DocumentMetadataCollector $documentMetadataCollector
+     * @param IndexManagerFactory       $indexManagerFactory
+     * @param string                    $languageSeparator
      */
-    public function __construct(DocumentMetadataCollection $documentMetadataCollection, IndexManagerFactory $indexManagerFactory, $languageSeparator)
+    public function __construct(DocumentMetadataCollector $documentMetadataCollector, IndexManagerFactory $indexManagerFactory, $languageSeparator)
     {
-        $this->documentMetadataCollection = $documentMetadataCollection;
+        $this->documentMetadataCollector = $documentMetadataCollector;
         $this->indexManagerFactory = $indexManagerFactory;
         $this->languageSeparator = $languageSeparator;
     }
@@ -64,9 +64,9 @@ class Finder
     {
         $client = $this->getConnection([$documentClass])->getClient();
 
-        $allDocumentClassToIndexMappings = $this->documentMetadataCollection->getDocumentClassesIndices();
+        $allDocumentClassToIndexMappings = $this->documentMetadataCollector->getDocumentClassesIndices();
         $indexManagerName = $allDocumentClassToIndexMappings[$documentClass];
-        $documentMetadata = $this->documentMetadataCollection->getDocumentMetadata($documentClass);
+        $documentMetadata = $this->documentMetadataCollector->getDocumentMetadata($documentClass);
 
         $params = [
             'index' => $this->indexManagerFactory->get($indexManagerName)->getReadAlias(),
@@ -164,13 +164,13 @@ class Finder
      */
     public function getTargetIndicesAndTypes(array $documentClasses)
     {
-        $allDocumentClassToIndexMappings = $this->documentMetadataCollection->getDocumentClassesIndices();
+        $allDocumentClassToIndexMappings = $this->documentMetadataCollector->getDocumentClassesIndices();
         $documentClassToIndexMap = array_intersect_key($allDocumentClassToIndexMappings, array_flip($documentClasses));
 
         $indices = [];
         $types = [];
         foreach ($documentClassToIndexMap as $documentClass => $indexManagerName) {
-            $documentMetadata = $this->documentMetadataCollection->getDocumentMetadata($documentClass);
+            $documentMetadata = $this->documentMetadataCollector->getDocumentMetadata($documentClass);
 
             $indices[] = $this->indexManagerFactory->get($indexManagerName)->getReadAlias();
             $types[] = $documentMetadata->getType();
@@ -192,12 +192,12 @@ class Finder
      */
     private function getIndicesAndTypesMetadataCollection(array $documentClasses)
     {
-        $allDocumentClassToIndexMappings = $this->documentMetadataCollection->getDocumentClassesIndices();
+        $allDocumentClassToIndexMappings = $this->documentMetadataCollector->getDocumentClassesIndices();
         $documentClassToIndexMap = array_intersect_key($allDocumentClassToIndexMappings, array_flip($documentClasses));
         $typesMetadataCollection = new IndicesAndTypesMetadataCollection();
 
         $getLiveIndices = false;
-        $classToTypeMap = $this->documentMetadataCollection->getClassToTypeMap($documentClasses);
+        $classToTypeMap = $this->documentMetadataCollector->getClassToTypeMap($documentClasses);
         // If there are duplicate type names across the indices we're querying
         if (count($classToTypeMap) > count(array_unique($classToTypeMap))) {
             // We'll need to get the live index name for each type, so we can correctly map the results to the appropriate objects
@@ -207,7 +207,7 @@ class Finder
         foreach ($documentClassToIndexMap as $documentClass => $indexManagerName) {
             // Build mappings of indices and types to metadata, for the Converter
             $liveIndex = $getLiveIndices ? $this->indexManagerFactory->get($indexManagerName)->getLiveIndex() : null;
-            $documentMetadata = $this->documentMetadataCollection->getDocumentMetadata($documentClass);
+            $documentMetadata = $this->documentMetadataCollector->getDocumentMetadata($documentClass);
             $typesMetadataCollection->setTypeMetadata($documentMetadata, $liveIndex);
         }
 
@@ -301,7 +301,7 @@ class Finder
     {
         $connection = null;
         foreach ($documentClasses as $documentClass) {
-            $indexManagerName = $this->documentMetadataCollection->getDocumentClassIndex($documentClass);
+            $indexManagerName = $this->documentMetadataCollector->getDocumentClassIndex($documentClass);
             $indexManager = $this->indexManagerFactory->get($indexManagerName);
             if (!is_null($connection) && $indexManager->getConnection()->getConnectionName() != $connection->getConnectionName()) {
                 throw new \InvalidArgumentException(sprintf('All searched types must be in indices within the same connection'));

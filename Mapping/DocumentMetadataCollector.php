@@ -136,6 +136,62 @@ class DocumentMetadataCollector
     }
 
     /**
+     * Return mapping of document classes in short notation (i.e. AppBundle:Product) to ES types
+     *
+     * @param array $documentClasses Only return those classes if specified
+     * @return array
+     */
+    public function getClassToTypeMap(array $documentClasses = [])
+    {
+        $result = [];
+        foreach ($this->metadata as $index => $documentsMetadata) {
+            foreach ($documentsMetadata as $documentClass => $documentMetadata) {
+                /** @var DocumentMetadata $documentMetadata */
+                $result[$documentClass] = $documentMetadata->getType();
+            }
+        }
+
+        if ($documentClasses) {
+            $result = array_intersect_key($result, array_flip($documentClasses));
+        }
+
+        return $result;
+    }
+
+    /**
+     * Returns all document classes in the collection as keys and the corresponding index manager that manages them as values
+     *
+     * @return array
+     */
+    public function getDocumentClassesIndices()
+    {
+        $result = [];
+        foreach ($this->metadata as $index => $types) {
+            foreach ($types as $typeDocumentClass => $documentMetadata) {
+                $result[$typeDocumentClass] = $index;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Returns the index manager name that manages the given entity document class
+     *
+     * @param string $documentClass
+     * @return string
+     */
+    public function getDocumentClassIndex($documentClass)
+    {
+        $indices = $this->getDocumentClassesIndices();
+        if (!isset($indices[$documentClass])) {
+            throw new \InvalidArgumentException(sprintf('Entity "%s" is not managed by any index manager', $documentClass));
+        }
+
+        return $indices[$documentClass];
+    }
+
+    /**
      * Returns document mapping with metadata
      *
      * @param string $documentClassName
