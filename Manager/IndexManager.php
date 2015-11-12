@@ -7,9 +7,6 @@ use Sineflow\ElasticsearchBundle\Document\Provider\ProviderInterface;
 use Sineflow\ElasticsearchBundle\Document\Provider\ProviderRegistry;
 use Sineflow\ElasticsearchBundle\Document\Repository\Repository;
 use Sineflow\ElasticsearchBundle\Document\Repository\RepositoryInterface;
-use Sineflow\ElasticsearchBundle\Event\ElasticsearchCommitEvent;
-use Sineflow\ElasticsearchBundle\Event\ElasticsearchPersistEvent;
-use Sineflow\ElasticsearchBundle\Event\Events;
 use Sineflow\ElasticsearchBundle\Exception\BulkRequestException;
 use Sineflow\ElasticsearchBundle\Exception\Exception;
 use Sineflow\ElasticsearchBundle\Exception\IndexRebuildingException;
@@ -18,8 +15,6 @@ use Sineflow\ElasticsearchBundle\Finder\Finder;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollection;
 use Sineflow\ElasticsearchBundle\Result\Converter;
-use Symfony\Component\EventDispatcher\Event;
-use Symfony\Component\EventDispatcher\EventDispatcher;
 
 /**
  * Manager class.
