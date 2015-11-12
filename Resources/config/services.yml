@@ -97,7 +97,7 @@ services:
             - [setIndexManagers, [%sfes.indices%]]
             - [addLogger, [@sfes.logger.trace]]
         tags:
-            - {name: data_collector, template: %sfes.profiler.template%, id: sfes}
+            - {name: data_collector, template: %sfes.profiler.template%, id: sfes.profiler}
 
     sfes.subscriber.knp_paginate_query_subscriber:
         class: %sfes.knp_paginate_query_subscriber_class%

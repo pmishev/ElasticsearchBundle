@@ -125,7 +125,7 @@ class ElasticsearchProfiler implements DataCollectorInterface
      */
     public function getName()
     {
-        return 'sfes';
+        return 'sfes.profiler';
     }
 
     /**

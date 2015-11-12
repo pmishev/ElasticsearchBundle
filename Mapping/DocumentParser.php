@@ -91,6 +91,8 @@ class DocumentParser
      */
     public function parse(\ReflectionClass $reflectionClass, array $indexAnalyzers)
     {
+        $metadata = [];
+
         /** @var Document $class */
         $class = $this
             ->reader
@@ -108,12 +110,14 @@ class DocumentParser
 
             $properties = $this->getProperties($reflectionClass, $indexAnalyzers);
 
-            return [
+            $metadata = [
                 'type' => $type,
                 'properties' => $properties,
-                'fields' => array_merge(
-                    $class->dump(),
-                    ['_parent' => $parent === null ? null : ['type' => $parent]]
+                'fields' => array_filter(
+                    array_merge(
+                        $class->dump(),
+                        ['_parent' => $parent === null ? null : ['type' => $parent]]
+                    )
                 ),
                 'propertiesMetadata' => $this->getPropertiesMetadata($reflectionClass),
                 'objects' => $this->getObjects(),
@@ -123,7 +127,7 @@ class DocumentParser
             ];
         }
 
-        return [];
+        return $metadata;
     }
 
     /**

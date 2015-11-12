@@ -74,26 +74,6 @@ abstract class AbstractProperty implements DumperInterface
     public $includeInAll;
 
     /**
-     * @var float
-     */
-    public $boost;
-
-    /**
-     * @var bool
-     */
-    public $enabled;
-
-    /**
-     * @var string
-     */
-    public $indexName;
-
-    /**
-     * @var string
-     */
-    public $format;
-
-    /**
      * @var mixed
      */
     public $nullValue;

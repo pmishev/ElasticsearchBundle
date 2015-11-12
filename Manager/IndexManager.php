@@ -62,11 +62,6 @@ class IndexManager
     private $convertersCache;
 
     /**
-     * @var EventDispatcher
-     */
-    private $eventDispatcher;
-
-    /**
      * @var RepositoryInterface[]
      */
     private $repositories = [];
@@ -179,14 +174,6 @@ class IndexManager
     public function getConnection()
     {
         return $this->connection;
-    }
-
-    /**
-     * @param EventDispatcher $eventDispatcher
-     */
-    public function setEventDispatcher($eventDispatcher)
-    {
-        $this->eventDispatcher = $eventDispatcher;
     }
 
     /**
@@ -564,11 +551,6 @@ class IndexManager
      */
     public function persist(DocumentInterface $document)
     {
-        $this->dispatchEvent(
-            Events::PRE_PERSIST,
-            new ElasticsearchPersistEvent($this->getConnection(), $document)
-        );
-
         $documentClass = get_class($document);
         $documentMetadata = $this->metadataCollection->getDocumentMetadata($documentClass);
         $converter = isset($this->convertersCache[$documentClass]) ?
@@ -577,11 +559,6 @@ class IndexManager
         $documentArray = $converter->convertToArray($document);
 
         $this->persistRaw($documentMetadata->getType(), $documentArray);
-
-        $this->dispatchEvent(
-            Events::POST_PERSIST,
-            new ElasticsearchPersistEvent($this->getConnection(), $document)
-        );
     }
 
     /**
@@ -605,17 +582,7 @@ class IndexManager
      */
     public function commit()
     {
-        $this->dispatchEvent(
-            Events::PRE_COMMIT,
-            new ElasticsearchCommitEvent($this->getConnection())
-        );
-
         $this->getConnection()->commit();
-
-        $this->dispatchEvent(
-            Events::POST_COMMIT,
-            new ElasticsearchCommitEvent($this->getConnection())
-        );
     }
 
     /**
@@ -634,18 +601,5 @@ class IndexManager
         }
 
         return $metadata;
-    }
-
-    /**
-     * Dispatches an event, if eventDispatcher is set.
-     *
-     * @param string $eventName
-     * @param Event  $event
-     */
-    private function dispatchEvent($eventName, Event $event)
-    {
-        if ($this->eventDispatcher !== null) {
-            $this->eventDispatcher->dispatch($eventName, $event);
-        }
     }
 }
