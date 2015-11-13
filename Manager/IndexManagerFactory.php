@@ -2,42 +2,113 @@
 
 namespace Sineflow\ElasticsearchBundle\Manager;
 
-use Symfony\Component\DependencyInjection\ContainerAwareInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Sineflow\ElasticsearchBundle\Document\Provider\ProviderRegistry;
+use Sineflow\ElasticsearchBundle\Finder\Finder;
+use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
 
 /**
  * Factory for index manager services
  */
-class IndexManagerFactory implements ContainerAwareInterface
+class IndexManagerFactory
 {
     /**
-     * @var ContainerInterface
+     * @var DocumentMetadataCollector
      */
-    private $container;
+    private $metadataCollector;
 
     /**
-     * Sets the Container.
-     *
-     * @param ContainerInterface|null $container A ContainerInterface instance or null
+     * @var ProviderRegistry
      */
-    public function setContainer(ContainerInterface $container = null)
+    private $providerRegistry;
+
+    /**
+     * @var Finder
+     */
+    private $finder;
+
+    /**
+     * @var string The separator string between property names and language codes for ML properties
+     */
+    private $languageSeparator;
+
+    /**
+     * @var IndexManager[] Array keeping references to the created index managers
+     */
+    private $indexManagers;
+
+    /**
+     * @param DocumentMetadataCollector $metadataCollector
+     * @param ProviderRegistry          $providerRegistry
+     * @param Finder                    $finder
+     * @param string                    $languageSeparator
+     */
+    public function __construct(
+        DocumentMetadataCollector $metadataCollector,
+        ProviderRegistry $providerRegistry,
+        Finder $finder,
+        $languageSeparator)
     {
-        $this->container = $container;
+        $this->metadataCollector = $metadataCollector;
+        $this->providerRegistry = $providerRegistry;
+        $this->finder = $finder;
+        $this->languageSeparator = $languageSeparator;
     }
 
     /**
-     * Returns the index manager service for a given index manager name
-     *
-     * @param string $name
+     * @param string            $managerName
+     * @param ConnectionManager $connection
+     * @param array             $indexSettings
      * @return IndexManager
      */
-    public function get($name)
+    public function createManager(
+        $managerName,
+        ConnectionManager $connection,
+        array $indexSettings)
     {
-        $serviceName = sprintf('sfes.index.%s', $name);
-        if (!$this->container->has($serviceName)) {
-            throw new \RuntimeException(sprintf('No manager is defined for "%s" index', $name));
+        $manager = new IndexManager(
+            $managerName,
+            $connection,
+            $this->metadataCollector,
+            $this->providerRegistry,
+            $this->finder,
+            $this->getIndexParams($managerName, $indexSettings),
+            $this->languageSeparator
+        );
+
+        $manager->setUseAliases($indexSettings['use_aliases']);
+
+        $this->indexManagers[$managerName] = $manager;
+
+        return $manager;
+    }
+
+    /**
+     * Returns params for index.
+     *
+     * @param string           $indexManagerName
+     * @param array            $indexSettings
+     * @return array
+     */
+    private function getIndexParams($indexManagerName, array $indexSettings)
+    {
+        $index = ['index' => $indexSettings['name']];
+
+        if (!empty($indexSettings['settings'])) {
+            $index['body']['settings'] = $indexSettings['settings'];
         }
 
-        return $this->container->get($serviceName);
+        $mappings = [];
+
+        $metadata = $this->metadataCollector->getDocumentsMetadataForIndex($indexManagerName);
+        foreach ($metadata as $className => $documentMetadata) {
+            $mappings[$documentMetadata->getType()] = $documentMetadata->getClientMapping();
+        }
+
+        if (!empty($mappings)) {
+            $index['body']['mappings'] = $mappings;
+        }
+
+        return $index;
     }
+
 }

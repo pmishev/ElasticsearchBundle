@@ -4,7 +4,7 @@ namespace Sineflow\ElasticsearchBundle\Finder;
 
 use Elasticsearch\Common\Exceptions\Missing404Exception;
 use Sineflow\ElasticsearchBundle\Manager\ConnectionManager;
-use Sineflow\ElasticsearchBundle\Manager\IndexManagerFactory;
+use Sineflow\ElasticsearchBundle\Manager\IndexManagerRegistry;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
 use Sineflow\ElasticsearchBundle\DTO\IndicesAndTypesMetadataCollection;
 use Sineflow\ElasticsearchBundle\Paginator\KnpPaginatorAdapter;
@@ -30,9 +30,9 @@ class Finder
     private $documentMetadataCollector;
 
     /**
-     * @var IndexManagerFactory
+     * @var IndexManagerRegistry
      */
-    private $indexManagerFactory;
+    private $indexManagerRegistry;
 
     /**
      * @var string
@@ -42,13 +42,13 @@ class Finder
     /**
      * Finder constructor.
      * @param DocumentMetadataCollector $documentMetadataCollector
-     * @param IndexManagerFactory       $indexManagerFactory
+     * @param IndexManagerRegistry      $indexManagerRegistry
      * @param string                    $languageSeparator
      */
-    public function __construct(DocumentMetadataCollector $documentMetadataCollector, IndexManagerFactory $indexManagerFactory, $languageSeparator)
+    public function __construct(DocumentMetadataCollector $documentMetadataCollector, IndexManagerRegistry $indexManagerRegistry, $languageSeparator)
     {
         $this->documentMetadataCollector = $documentMetadataCollector;
-        $this->indexManagerFactory = $indexManagerFactory;
+        $this->indexManagerRegistry = $indexManagerRegistry;
         $this->languageSeparator = $languageSeparator;
     }
 
@@ -69,7 +69,7 @@ class Finder
         $documentMetadata = $this->documentMetadataCollector->getDocumentMetadata($documentClass);
 
         $params = [
-            'index' => $this->indexManagerFactory->get($indexManagerName)->getReadAlias(),
+            'index' => $this->indexManagerRegistry->get($indexManagerName)->getReadAlias(),
             'type' => $documentMetadata->getType(),
             'id' => $id,
         ];
@@ -172,7 +172,7 @@ class Finder
         foreach ($documentClassToIndexMap as $documentClass => $indexManagerName) {
             $documentMetadata = $this->documentMetadataCollector->getDocumentMetadata($documentClass);
 
-            $indices[] = $this->indexManagerFactory->get($indexManagerName)->getReadAlias();
+            $indices[] = $this->indexManagerRegistry->get($indexManagerName)->getReadAlias();
             $types[] = $documentMetadata->getType();
         }
 
@@ -206,7 +206,7 @@ class Finder
 
         foreach ($documentClassToIndexMap as $documentClass => $indexManagerName) {
             // Build mappings of indices and types to metadata, for the Converter
-            $liveIndex = $getLiveIndices ? $this->indexManagerFactory->get($indexManagerName)->getLiveIndex() : null;
+            $liveIndex = $getLiveIndices ? $this->indexManagerRegistry->get($indexManagerName)->getLiveIndex() : null;
             $documentMetadata = $this->documentMetadataCollector->getDocumentMetadata($documentClass);
             $typesMetadataCollection->setTypeMetadata($documentMetadata, $liveIndex);
         }
@@ -302,7 +302,7 @@ class Finder
         $connection = null;
         foreach ($documentClasses as $documentClass) {
             $indexManagerName = $this->documentMetadataCollector->getDocumentClassIndex($documentClass);
-            $indexManager = $this->indexManagerFactory->get($indexManagerName);
+            $indexManager = $this->indexManagerRegistry->get($indexManagerName);
             if (!is_null($connection) && $indexManager->getConnection()->getConnectionName() != $connection->getConnectionName()) {
                 throw new \InvalidArgumentException(sprintf('All searched types must be in indices within the same connection'));
             }

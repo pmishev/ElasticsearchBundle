@@ -1,10 +1,10 @@
 parameters:
     sfes.provider_registry.class: Sineflow\ElasticsearchBundle\Document\Provider\ProviderRegistry
+    sfes.index_manager.class: Sineflow\ElasticsearchBundle\Manager\IndexManager
     sfes.index_manager_factory.class: Sineflow\ElasticsearchBundle\Manager\IndexManagerFactory
+    sfes.index_manager_registry.class: Sineflow\ElasticsearchBundle\Manager\IndexManagerRegistry
     sfes.finder.class: Sineflow\ElasticsearchBundle\Finder\Finder
     sfes.logging.path: "%kernel.logs_dir%/%kernel.environment%.sf_elasticsearch.log"
-#    sfes.export.class: ONGR\ElasticsearchBundle\Service\ExportService
-#    sfes.import.class: ONGR\ElasticsearchBundle\Service\ImportService
     sfes.document_locator.class: Sineflow\ElasticsearchBundle\Mapping\DocumentLocator
     sfes.document_parser.class: Sineflow\ElasticsearchBundle\Mapping\DocumentParser
     sfes.document_metadata_collector.class: Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector
@@ -17,12 +17,6 @@ parameters:
     sfes.knp_paginate_query_subscriber_class: Sineflow\ElasticsearchBundle\Subscriber\KnpPaginateQuerySubscriber
 
 services:
-#    sfes.export:
-#        class: %sfes.export.class%
-#
-#    sfes.import:
-#        class: %sfes.import.class%
-
     sfes.provider_registry:
         class: %sfes.provider_registry.class%
         calls:
@@ -30,12 +24,16 @@ services:
 
     sfes.index_manager_factory:
         class: %sfes.index_manager_factory.class%
+        arguments: [@sfes.document_metadata_collector, @sfes.provider_registry, @sfes.finder, %sfes.mlproperty.language_separator%]
+
+    sfes.index_manager_registry:
+        class: %sfes.index_manager_registry.class%
         calls:
             - [setContainer, ["@service_container"]]
 
     sfes.finder:
         class: %sfes.finder.class%
-        arguments: [@sfes.document_metadata_collector, @sfes.index_manager_factory, %sfes.mlproperty.language_separator%]
+        arguments: [@sfes.document_metadata_collector, @sfes.index_manager_registry, %sfes.mlproperty.language_separator%]
 
     sfes.document_locator:
         class: %sfes.document_locator.class%
