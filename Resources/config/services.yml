@@ -1,5 +1,6 @@
 parameters:
     sfes.provider_registry.class: Sineflow\ElasticsearchBundle\Document\Provider\ProviderRegistry
+    sfes.provider_self.class: Sineflow\ElasticsearchBundle\Document\Provider\ElasticsearchProvider
     sfes.index_manager.class: Sineflow\ElasticsearchBundle\Manager\IndexManager
     sfes.index_manager_factory.class: Sineflow\ElasticsearchBundle\Manager\IndexManagerFactory
     sfes.index_manager_registry.class: Sineflow\ElasticsearchBundle\Manager\IndexManagerRegistry

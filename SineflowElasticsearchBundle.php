@@ -4,7 +4,6 @@ namespace Sineflow\ElasticsearchBundle;
 
 use Sineflow\ElasticsearchBundle\DependencyInjection\Compiler\AddConnectionsPass;
 use Sineflow\ElasticsearchBundle\DependencyInjection\Compiler\AddIndexManagersPass;
-use Sineflow\ElasticsearchBundle\DependencyInjection\Compiler\AddMetadataCollectionPass;
 use Sineflow\ElasticsearchBundle\DependencyInjection\Compiler\MappingPass;
 use Sineflow\ElasticsearchBundle\DependencyInjection\Compiler\RegisterDataProvidersPass;
 use Sineflow\ElasticsearchBundle\DependencyInjection\Compiler\RegisterLanguageProviderPass;
@@ -26,7 +25,6 @@ class SineflowElasticsearchBundle extends Bundle
 
         $container->addCompilerPass(new AddConnectionsPass());
         $container->addCompilerPass(new RegisterLanguageProviderPass());
-        $container->addCompilerPass(new AddMetadataCollectionPass());
         $container->addCompilerPass(new AddIndexManagersPass());
         $container->addCompilerPass(new RegisterDataProvidersPass());
     }

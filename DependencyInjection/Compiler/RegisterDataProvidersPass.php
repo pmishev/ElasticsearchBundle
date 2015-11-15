@@ -29,11 +29,7 @@ class RegisterDataProvidersPass implements CompilerPassInterface
         }
 
         $registry = $container->getDefinition('sfes.provider_registry');
-        $metadataCollection = $container->get('sfes.document_metadata_collection');
         $providers = $container->findTaggedServiceIds('sfes.provider');
-
-        // Get all types and their corresponding indices
-        $typeIndices = $metadataCollection->getDocumentClassesIndices();
 
         foreach ($providers as $providerId => $tags) {
             $documentClass = null;
@@ -49,30 +45,9 @@ class RegisterDataProvidersPass implements CompilerPassInterface
                 }
 
                 $documentClass = $tag['type'];
-
-                unset($typeIndices[$documentClass]);
             }
 
             $registry->addMethodCall('addProvider', array($documentClass, $providerId));
-        }
-
-        // Set Elasticsearch self-provider by default for all types that do not have a provider registered
-        foreach ($typeIndices as $documentClass => $index) {
-            $providerDefinition = new Definition(
-                'Sineflow\ElasticsearchBundle\Document\Provider\ElasticsearchProvider',
-                [
-                    $documentClass,
-                    $container->getDefinition('sfes.document_metadata_collector'),
-                    $container->getDefinition(sprintf('sfes.index.%s', $index)),
-                    $documentClass
-                ]
-            );
-            $definitionId = sprintf('sfes.provider.%s.%s', strtolower($index), strtolower($metadataCollection->getDocumentMetadata($documentClass)->getType()));
-            $container->setDefinition(
-                $definitionId,
-                $providerDefinition
-            );
-            $registry->addMethodCall('addProvider', array($documentClass, $definitionId));
         }
     }
 

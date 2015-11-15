@@ -30,42 +30,42 @@ class ProviderRegistry implements ContainerAwareInterface
     /**
      * Registers a provider for the specified type entity.
      *
-     * @param string $type       The short path to the type entity (e.g AppBundle:MyType)
+     * @param string $documentClass The short path to the type entity (e.g AppBundle:MyType)
      * @param string $providerId
      */
-    public function addProvider($type, $providerId)
+    public function addProvider($documentClass, $providerId)
     {
-        $this->providers[$type] = $providerId;
-    }
-
-    /**
-     * Gets all registered providers.
-     *
-     * @return ProviderInterface[]
-     */
-    public function getAllProviderInstances()
-    {
-        $providers = array();
-        foreach ($this->providers as $type => $providerId) {
-            $providers[$type] = $this->container->get($providerId);
-        }
-
-        return $providers;
+        $this->providers[$documentClass] = $providerId;
     }
 
     /**
      * Gets the provider for a type.
      *
-     * @param string $type
+     * @param string $documentClass The short path to the type entity (e.g AppBundle:MyType)
      * @return ProviderInterface
      * @throws \InvalidArgumentException if no provider was registered for the type
      */
-    public function getProviderInstance($type)
+    public function getProviderInstance($documentClass)
     {
-        if (!isset($this->providers[$type])) {
-            throw new \InvalidArgumentException(sprintf('No provider was registered for type "%s".', $type));
+        if (isset($this->providers[$documentClass])) {
+            return $this->container->get($this->providers[$documentClass]);
         }
 
-        return $this->container->get($this->providers[$type]);
+        // Return default self-provider, if no specific one was registered
+        $providerClass = $this->container->getParameter('sfes.provider_self.class');
+        if (class_exists($providerClass)) {
+            $indexManager = $this->container->get('sfes.index_manager_registry')->get(
+                $this->container->get('sfes.document_metadata_collector')->getDocumentClassIndex($documentClass)
+            );
+
+            return new $providerClass(
+                $documentClass,
+                $this->container->get('sfes.document_metadata_collector'),
+                $indexManager,
+                $documentClass
+            );
+        }
+
+        throw new \InvalidArgumentException(sprintf('No provider is registered for type "%s".', $documentClass));
     }
 }
