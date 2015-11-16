@@ -45,12 +45,8 @@ abstract class AbstractProperty implements DumperInterface
      *
      * @var array
      */
-    public $rawMapping;
+    public $options;
 
-    /**
-     * @var string
-     */
-    public $index;
 
     /**
      * @var string
@@ -68,16 +64,6 @@ abstract class AbstractProperty implements DumperInterface
     public $searchAnalyzer;
 
     /**
-     * @var bool
-     */
-    public $includeInAll;
-
-    /**
-     * @var mixed
-     */
-    public $nullValue;
-
-    /**
      * {@inheritdoc}
      */
     public function dump(array $options = [])
@@ -91,7 +77,7 @@ abstract class AbstractProperty implements DumperInterface
                 }
             ),
             // Remove system properties, which are not a part of the Elasticsearch mapping
-            array_flip(['name', 'objectName', 'multiple', 'rawMapping'])
+            array_flip(['name', 'objectName', 'multiple', 'options'])
         );
 
         $result = array_combine(

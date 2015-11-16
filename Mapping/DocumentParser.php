@@ -345,8 +345,8 @@ class DocumentParser
         }
 
         // Raw override.
-        if (is_array($propertyAnnotation->rawMapping)) {
-            $propertyMapping = array_merge($propertyMapping, $propertyAnnotation->rawMapping);
+        if (is_array($propertyAnnotation->options)) {
+            $propertyMapping = array_merge($propertyMapping, $propertyAnnotation->options);
         }
 
         return $propertyMapping;
