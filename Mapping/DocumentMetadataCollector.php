@@ -2,13 +2,15 @@
 
 namespace Sineflow\ElasticsearchBundle\Mapping;
 
-use Doctrine\Common\Cache\CacheProvider;
+use Doctrine\Common\Cache\Cache;
 
 /**
  * Class for getting type/document metadata.
  */
 class DocumentMetadataCollector
 {
+    const CACHE_KEY = 'sfes.documents_metadata';
+
     /**
      * <index_manager_name> => [
      *      <document_class_short_name> => DocumentMetadata
@@ -36,32 +38,62 @@ class DocumentMetadataCollector
     private $parser;
 
     /**
-     * @var CacheProvider
+     * @var Cache
      */
-    private $cacheProvider;
+    private $cache;
+
+    /**
+     * @var boolean
+     */
+    private $debug;
 
     /**
      * @param array           $indexManagers   The list of index managers defined
      * @param DocumentLocator $documentLocator For finding documents.
      * @param DocumentParser  $parser          For reading document annotations.
-     * @param CacheProvider   $cacheProvider   For caching documents metadata
+     * @param Cache           $cache           For caching documents metadata
+     * @param bool            $debug
      */
-    public function __construct(array $indexManagers, DocumentLocator $documentLocator, DocumentParser $parser, CacheProvider $cacheProvider = null)
+    public function __construct(array $indexManagers, DocumentLocator $documentLocator, DocumentParser $parser, Cache $cache, $debug = false)
     {
         $this->indexManagers = $indexManagers;
         $this->documentLocator = $documentLocator;
         $this->parser = $parser;
-        $this->cacheProvider = $cacheProvider;
+        $this->cache = $cache;
+        $this->debug = (boolean) $debug;
 
-        // TODO: enable caching after I do the main logic
-//        if ($this->cacheProvider) {
-//            $this->metadata = $this->cacheProvider->fetch('sfes.documents_metadata');
-//        }
+        $this->metadata = $this->cache->fetch(self::CACHE_KEY);
+        // If there was metadata in the cache
+        if (false !== $this->metadata) {
+            // If in debug mode and the cache has expired
+            if ($this->debug && !$this->isCacheFresh()) {
+                $this->metadata = false;
+            }
+        }
 
         // If there was no cached metadata, retrieve it now
-        if (empty($this->metadata)) {
+        if (false === $this->metadata) {
             $this->fetchDocumentsMetadata();
         }
+    }
+
+    /**
+     * Returns true if metadata cache is up to date
+     *
+     * @return bool
+     */
+    private function isCacheFresh()
+    {
+        $documentDirs = $this->documentLocator->getAllDocumentDirs();
+
+        foreach ($documentDirs as $dir) {
+            $isFresh = $this->cache->fetch('[C]'.self::CACHE_KEY) >= filemtime($dir);
+            if (!$isFresh) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -90,10 +122,10 @@ class DocumentMetadataCollector
             }
         }
 
-        // TODO: enable caching after I do the main logic
-//        if ($this->cacheProvider) {
-//            $this->cacheProvider->save('sfes.documents_metadata', $this->metadata);
-//        }
+        $this->cache->save(self::CACHE_KEY, $this->metadata);
+        if ($this->debug) {
+            $this->cache->save('[C]'.self::CACHE_KEY, time());
+        }
 
         return $this->metadata;
     }

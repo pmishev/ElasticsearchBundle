@@ -46,6 +46,26 @@ class DocumentLocator
     }
 
     /**
+     * Returns list of existing directories within all application bundles that are possible locations for ES documents
+     *
+     * @return array
+     */
+    public function getAllDocumentDirs()
+    {
+        $dirs = [];
+        foreach ($this->bundles as $bundle) {
+            $reflection = new \ReflectionClass($bundle);
+            $filename = $reflection->getFileName();
+            $dir = dirname($filename).'/'.$this->getDocumentDir();
+            if (file_exists($dir)) {
+                $dirs[] = $dir;
+            }
+        }
+
+        return $dirs;
+    }
+
+    /**
      * Resolves document class name from short syntax.
      *
      * @param string $className Short syntax for class name (e.g AppBundle:Product)

@@ -1,20 +1,21 @@
 parameters:
+    sfes.logging.path: "%kernel.logs_dir%/%kernel.environment%.sf_elasticsearch.log"
+    sfes.profiler_backtrace_enabled: false
+    sfes.profiler.template: SineflowElasticsearchBundle:Profiler:profiler.html.twig
+    sfes.mlproperty.language_separator: '-'
+
     sfes.provider_registry.class: Sineflow\ElasticsearchBundle\Document\Provider\ProviderRegistry
     sfes.provider_self.class: Sineflow\ElasticsearchBundle\Document\Provider\ElasticsearchProvider
     sfes.index_manager.class: Sineflow\ElasticsearchBundle\Manager\IndexManager
     sfes.index_manager_factory.class: Sineflow\ElasticsearchBundle\Manager\IndexManagerFactory
     sfes.index_manager_registry.class: Sineflow\ElasticsearchBundle\Manager\IndexManagerRegistry
     sfes.finder.class: Sineflow\ElasticsearchBundle\Finder\Finder
-    sfes.logging.path: "%kernel.logs_dir%/%kernel.environment%.sf_elasticsearch.log"
     sfes.document_locator.class: Sineflow\ElasticsearchBundle\Mapping\DocumentLocator
     sfes.document_parser.class: Sineflow\ElasticsearchBundle\Mapping\DocumentParser
     sfes.document_metadata_collector.class: Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector
     sfes.logger.collection_handler.class: Sineflow\ElasticsearchBundle\Profiler\Handler\CollectionHandler
     sfes.connection_factory.class: Sineflow\ElasticsearchBundle\Manager\ConnectionManagerFactory
     sfes.profiler.class: Sineflow\ElasticsearchBundle\Profiler\ElasticsearchProfiler
-    sfes.profiler.template: SineflowElasticsearchBundle:Profiler:profiler.html.twig
-    sfes.profiler_backtrace_enabled: false
-    sfes.mlproperty.language_separator: '-'
     sfes.knp_paginate_query_subscriber_class: Sineflow\ElasticsearchBundle\Subscriber\KnpPaginateQuerySubscriber
 
 services:
@@ -64,7 +65,7 @@ services:
 
     sfes.document_metadata_collector:
         class: %sfes.document_metadata_collector.class%
-        arguments: [%sfes.indices%, @sfes.document_locator, @sfes.document_parser]
+        arguments: [%sfes.indices%, @sfes.document_locator, @sfes.document_parser, @sfes.cache_engine, %kernel.debug%]
 
     sfes.logger.collection_handler:
         class: %sfes.logger.collection_handler.class%
