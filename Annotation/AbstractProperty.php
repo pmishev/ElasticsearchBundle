@@ -18,19 +18,25 @@ abstract class AbstractProperty implements DumperInterface
     public $name;
 
     /**
-     * @var array<\Sineflow\ElasticsearchBundle\Annotation\MultiField>
+     * @var string
+     *
+     * @Required
+     * @Enum({"string", "boolean", "integer", "float", "date", "object", "nested", "geo_point", "geo_shape", "ip"})
      */
-    public $fields;
+    public $type;
 
     /**
+     * The object name must be defined, if type is 'object' or 'nested'
+     *
      * @var string Object name to map.
      */
     public $objectName;
 
     /**
      * Defines if related object will have one or multiple values.
+     * If this value is set to true, ObjectIterator will be provided in the result, as opposed to a Document object
      *
-     * @var bool OneToOne or OneToMany.
+     * @var bool
      */
     public $multiple;
 
@@ -40,13 +46,6 @@ abstract class AbstractProperty implements DumperInterface
      * @var array
      */
     public $rawMapping;
-
-    /**
-     * @var string
-     *
-     * @Required
-     */
-    public $type;
 
     /**
      * @var string

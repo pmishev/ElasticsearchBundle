@@ -7,7 +7,6 @@ use Doctrine\Common\Annotations\Reader;
 use Sineflow\ElasticsearchBundle\Annotation\AbstractProperty;
 use Sineflow\ElasticsearchBundle\Annotation\Document;
 use Sineflow\ElasticsearchBundle\Annotation\MLProperty;
-use Sineflow\ElasticsearchBundle\Annotation\MultiField;
 use Sineflow\ElasticsearchBundle\LanguageProvider\LanguageProviderInterface;
 
 /**
@@ -219,7 +218,6 @@ class DocumentParser
             'Property',
             'Object',
             'Nested',
-            'MultiField',
         ];
 
         foreach ($annotations as $annotation) {
@@ -344,16 +342,6 @@ class DocumentParser
         // Object.
         if (in_array($propertyAnnotation->type, ['object', 'nested']) && !empty($propertyAnnotation->objectName)) {
             $propertyMapping = array_replace_recursive($propertyMapping, $this->getObjectMapping($propertyAnnotation->objectName, $indexAnalyzers));
-        }
-
-        // MultiField.
-        if (isset($propertyMapping['fields']) && !in_array($propertyAnnotation->type, ['object', 'nested'])) {
-            $fieldsMap = [];
-            /** @var MultiField $field */
-            foreach ($propertyMapping['fields'] as $field) {
-                $fieldsMap[$field->name] = $field->dump();
-            }
-            $propertyMapping['fields'] = $fieldsMap;
         }
 
         // Raw override.
