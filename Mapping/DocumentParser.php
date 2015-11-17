@@ -344,11 +344,6 @@ class DocumentParser
             $propertyMapping = array_replace_recursive($propertyMapping, $this->getObjectMapping($propertyAnnotation->objectName, $indexAnalyzers));
         }
 
-        // Raw override.
-        if (is_array($propertyAnnotation->options)) {
-            $propertyMapping = array_merge($propertyMapping, $propertyAnnotation->options);
-        }
-
         return $propertyMapping;
     }
 

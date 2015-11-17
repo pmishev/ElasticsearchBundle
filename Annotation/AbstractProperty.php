@@ -47,48 +47,12 @@ abstract class AbstractProperty implements DumperInterface
      */
     public $options;
 
-
-    /**
-     * @var string
-     */
-    public $analyzer;
-
-    /**
-     * @var string
-     */
-    public $indexAnalyzer;
-
-    /**
-     * @var string
-     */
-    public $searchAnalyzer;
-
     /**
      * {@inheritdoc}
      */
     public function dump(array $options = [])
     {
-        $array = array_diff_key(
-            // Remove properties with no value set
-            array_filter(
-                get_object_vars($this),
-                function ($value) {
-                    return !is_null($value);
-                }
-            ),
-            // Remove system properties, which are not a part of the Elasticsearch mapping
-            array_flip(['name', 'objectName', 'multiple', 'options'])
-        );
-
-        $result = array_combine(
-            array_map(
-                function ($key) {
-                    return Caser::snake($key);
-                },
-                array_keys($array)
-            ),
-            array_values($array)
-        );
+        $result = array_merge($this->options, ['type' => $this->type]);
 
         return $result;
     }
