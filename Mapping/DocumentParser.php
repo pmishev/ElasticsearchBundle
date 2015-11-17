@@ -83,50 +83,64 @@ class DocumentParser
     /**
      * Parses document by used annotations and returns mapping for elasticsearch with some extra metadata.
      *
-     * @param \ReflectionClass $reflectionClass
+     * @param \ReflectionClass $documentReflection
      * @param array            $indexAnalyzers
      *
      * @return array
      */
-    public function parse(\ReflectionClass $reflectionClass, array $indexAnalyzers)
+    public function parse(\ReflectionClass $documentReflection, array $indexAnalyzers)
     {
         $metadata = [];
 
-        /** @var Document $class */
-        $class = $this
-            ->reader
-            ->getClassAnnotation($reflectionClass, self::DOCUMENT_ANNOTATION);
+        /** @var Document $classAnnotation */
+        $classAnnotation = $this->reader->getClassAnnotation($documentReflection, self::DOCUMENT_ANNOTATION);
 
-        if ($class !== null) {
-            if ($class->parent !== null) {
-                $parent = $this->getDocumentParentType(
-                    new \ReflectionClass($this->documentLocator->resolveClassName($class->parent))
+        if ($classAnnotation !== null) {
+            if ($classAnnotation->parent !== null) {
+                $parent = $this->getDocumentType(
+                    new \ReflectionClass($this->documentLocator->resolveClassName($classAnnotation->parent))
                 );
             } else {
                 $parent = null;
             }
-            $type = $this->getDocumentType($reflectionClass, $class);
+            $type = $this->getDocumentType($documentReflection);
 
-            $properties = $this->getProperties($reflectionClass, $indexAnalyzers);
+            $properties = $this->getProperties($documentReflection, $indexAnalyzers);
 
             $metadata = [
                 'type' => $type,
                 'properties' => $properties,
                 'fields' => array_filter(
                     array_merge(
-                        $class->dump(),
+                        $classAnnotation->dump(),
                         ['_parent' => $parent === null ? null : ['type' => $parent]]
                     )
                 ),
-                'propertiesMetadata' => $this->getPropertiesMetadata($reflectionClass),
+                'propertiesMetadata' => $this->getPropertiesMetadata($documentReflection),
                 'objects' => $this->getObjects(),
-                'repositoryClass' => $class->repositoryClass,
-                'className' => $reflectionClass->getName(),
-                'shortClassName' => $this->documentLocator->getShortClassName($reflectionClass->getName()),
+                'repositoryClass' => $classAnnotation->repositoryClass,
+                'className' => $documentReflection->getName(),
+                'shortClassName' => $this->documentLocator->getShortClassName($documentReflection->getName()),
             ];
         }
 
         return $metadata;
+    }
+
+    /**
+     * Returns document's elasticsearch type.
+     *
+     * @param \ReflectionClass $documentReflection
+     *
+     * @return string
+     */
+    private function getDocumentType(\ReflectionClass $documentReflection)
+    {
+        /** @var Document $classAnnotation */
+        $classAnnotation = $this->reader->getClassAnnotation($documentReflection, self::DOCUMENT_ANNOTATION);
+
+        // If an Elasticsearch type is not defined in the entity annotation, use the lowercased class name as such
+        return empty($classAnnotation->type) ? strtolower($documentReflection->getShortName()) : $classAnnotation->type;
     }
 
     /**
@@ -154,20 +168,20 @@ class DocumentParser
     /**
      * Finds properties metadata for every property used in document including parent classes.
      *
-     * @param \ReflectionClass $reflectionClass
+     * @param \ReflectionClass $documentReflection
      *
      * @return array
      */
-    private function getPropertiesMetadata(\ReflectionClass $reflectionClass)
+    private function getPropertiesMetadata(\ReflectionClass $documentReflection)
     {
-        $reflectionName = $reflectionClass->getName();
+        $reflectionName = $documentReflection->getName();
         if (array_key_exists($reflectionName, $this->propertiesMetadata)) {
             return $this->propertiesMetadata[$reflectionName];
         }
 
         $propertyMetadata = [];
         /** @var \ReflectionProperty $property */
-        foreach ($this->getDocumentPropertiesReflection($reflectionClass) as $name => $property) {
+        foreach ($this->getDocumentPropertiesReflection($documentReflection) as $name => $property) {
             $propertyAnnotation = $this->getPropertyAnnotationData($property);
             if ($propertyAnnotation !== null) {
                 $propertyMetadata[$propertyAnnotation->name] = [
@@ -225,56 +239,29 @@ class DocumentParser
         }
     }
 
-    /**
-     * Returns document parent.
-     *
-     * @param \ReflectionClass $reflectionClass
-     *
-     * @return string|null
-     */
-    private function getDocumentParentType(\ReflectionClass $reflectionClass)
-    {
-        /** @var Document $class */
-        $class = $this->reader->getClassAnnotation($reflectionClass, 'Sineflow\ElasticsearchBundle\Annotation\Document');
-
-        return $class ? $this->getDocumentType($reflectionClass, $class) : null;
-    }
-
-    /**
-     * Returns document type.
-     *
-     * @param \ReflectionClass $reflectionClass
-     * @param Document         $document
-     *
-     * @return string
-     */
-    private function getDocumentType(\ReflectionClass $reflectionClass, Document $document)
-    {
-        return empty($document->type) ? $reflectionClass->getShortName() : $document->type;
-    }
 
     /**
      * Returns all defined properties including private from parents.
      *
-     * @param \ReflectionClass $reflectionClass
+     * @param \ReflectionClass $documentReflection
      *
      * @return array
      */
-    private function getDocumentPropertiesReflection(\ReflectionClass $reflectionClass)
+    private function getDocumentPropertiesReflection(\ReflectionClass $documentReflection)
     {
-        if (in_array($reflectionClass->getName(), $this->properties)) {
-            return $this->properties[$reflectionClass->getName()];
+        if (in_array($documentReflection->getName(), $this->properties)) {
+            return $this->properties[$documentReflection->getName()];
         }
 
         $properties = [];
 
-        foreach ($reflectionClass->getProperties() as $property) {
+        foreach ($documentReflection->getProperties() as $property) {
             if (!in_array($property->getName(), $properties)) {
                 $properties[$property->getName()] = $property;
             }
         }
 
-        $parentReflection = $reflectionClass->getParentClass();
+        $parentReflection = $documentReflection->getParentClass();
         if ($parentReflection !== false) {
             $properties = array_merge(
                 $properties,
@@ -282,7 +269,7 @@ class DocumentParser
             );
         }
 
-        $this->properties[$reflectionClass->getName()] = $properties;
+        $this->properties[$documentReflection->getName()] = $properties;
 
         return $properties;
     }
@@ -290,16 +277,16 @@ class DocumentParser
     /**
      * Returns properties of reflection class.
      *
-     * @param \ReflectionClass $reflectionClass Class to read properties from.
+     * @param \ReflectionClass $documentReflection Class to read properties from.
      * @param array            $indexAnalyzers
      *
      * @return array
      */
-    private function getProperties(\ReflectionClass $reflectionClass, array $indexAnalyzers = [])
+    private function getProperties(\ReflectionClass $documentReflection, array $indexAnalyzers = [])
     {
         $mapping = [];
         /** @var \ReflectionProperty $property */
-        foreach ($this->getDocumentPropertiesReflection($reflectionClass) as $name => $property) {
+        foreach ($this->getDocumentPropertiesReflection($documentReflection) as $name => $property) {
             $propertyAnnotation = $this->getPropertyAnnotationData($property);
 
             if (empty($propertyAnnotation)) {
@@ -309,7 +296,7 @@ class DocumentParser
             // If it is a multi-language property
             if ($propertyAnnotation instanceof MLProperty) {
                 if ($propertyAnnotation->type != 'string') {
-                    throw new \InvalidArgumentException(sprintf('"%s" property in %s is declared as "MLProperty", so can only be of type "string"', $propertyAnnotation->name, $reflectionClass->getName()));
+                    throw new \InvalidArgumentException(sprintf('"%s" property in %s is declared as "MLProperty", so can only be of type "string"', $propertyAnnotation->name, $documentReflection->getName()));
                 }
                 if (!$this->languageProvider) {
                     throw new \InvalidArgumentException('There must be a service tagged as "sfes.language_provider" in order to use MLProperty');
@@ -373,17 +360,17 @@ class DocumentParser
     /**
      * Returns relation mapping by its reflection.
      *
-     * @param \ReflectionClass $reflectionClass
+     * @param \ReflectionClass $documentReflection
      * @param array            $indexAnalyzers
      *
      * @return array|null
      */
-    private function getRelationMapping(\ReflectionClass $reflectionClass, $indexAnalyzers = [])
+    private function getRelationMapping(\ReflectionClass $documentReflection, $indexAnalyzers = [])
     {
-        if ($this->reader->getClassAnnotation($reflectionClass, 'Sineflow\ElasticsearchBundle\Annotation\Object')
-            || $this->reader->getClassAnnotation($reflectionClass, 'Sineflow\ElasticsearchBundle\Annotation\Nested')
+        if ($this->reader->getClassAnnotation($documentReflection, 'Sineflow\ElasticsearchBundle\Annotation\Object')
+            || $this->reader->getClassAnnotation($documentReflection, 'Sineflow\ElasticsearchBundle\Annotation\Nested')
         ) {
-            return ['properties' => $this->getProperties($reflectionClass, $indexAnalyzers)];
+            return ['properties' => $this->getProperties($documentReflection, $indexAnalyzers)];
         }
 
         return null;

@@ -244,14 +244,14 @@ class DocumentMetadataCollector
     /**
      * Gathers annotation data from class.
      *
-     * @param \ReflectionClass $reflectionClass Document reflection class to read mapping from.
+     * @param \ReflectionClass $documentReflection Document reflection class to read mapping from.
      * @param array            $indexAnalyzers
      *
      * @return array
      */
-    private function getDocumentReflectionMetadata(\ReflectionClass $reflectionClass, array $indexAnalyzers)
+    private function getDocumentReflectionMetadata(\ReflectionClass $documentReflection, array $indexAnalyzers)
     {
-        $metadata = $this->parser->parse($reflectionClass, $indexAnalyzers);
+        $metadata = $this->parser->parse($documentReflection, $indexAnalyzers);
 
         return $metadata;
     }
