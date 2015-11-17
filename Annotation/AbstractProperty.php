@@ -2,6 +2,7 @@
 
 namespace Sineflow\ElasticsearchBundle\Annotation;
 
+use Sineflow\ElasticsearchBundle\Mapping\Caser;
 use Sineflow\ElasticsearchBundle\Mapping\DumperInterface;
 
 /**
@@ -51,7 +52,7 @@ abstract class AbstractProperty implements DumperInterface
      */
     public function dump(array $options = [])
     {
-        $result = array_merge($this->options, ['type' => $this->type]);
+        $result = array_merge((array) $this->options, ['type' => $this->type]);
 
         return $result;
     }
