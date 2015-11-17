@@ -31,6 +31,7 @@ services:
 
     sfes.index_manager_registry:
         class: %sfes.index_manager_registry.class%
+        arguments: [@sfes.document_locator, @sfes.document_metadata_collector]
         calls:
             - [setContainer, ["@service_container"]]
 
