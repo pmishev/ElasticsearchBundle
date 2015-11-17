@@ -20,9 +20,7 @@ class IndexCreateCommand extends AbstractManagerAwareCommand
 
         $this
             ->setName('sineflow:es:index:create')
-            ->setDescription('Creates elasticsearch index.')
-            ->addOption('with-warmers', 'w', InputOption::VALUE_NONE, 'Puts warmers into index')
-            ->addOption('no-mapping', 'm', InputOption::VALUE_NONE, 'Do not include mapping');
+            ->setDescription('Creates elasticsearch index.');
     }
 
     /**
@@ -33,7 +31,7 @@ class IndexCreateCommand extends AbstractManagerAwareCommand
         $indexManagerName = $input->getArgument('index');
         $indexManager = $this->getManager($indexManagerName);
         try {
-            $indexManager->createIndex($input->getOption('with-warmers'), $input->getOption('no-mapping'));
+            $indexManager->createIndex();
             $output->writeln(
                 sprintf(
                     '<info>Created index for "</info><comment>%s</comment><info>"</info>',

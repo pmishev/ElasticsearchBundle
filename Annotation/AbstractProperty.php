@@ -2,7 +2,6 @@
 
 namespace Sineflow\ElasticsearchBundle\Annotation;
 
-use Sineflow\ElasticsearchBundle\Mapping\Caser;
 use Sineflow\ElasticsearchBundle\Mapping\DumperInterface;
 
 /**

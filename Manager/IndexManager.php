@@ -241,17 +241,11 @@ class IndexManager
     /**
      * Creates elasticsearch index and adds aliases to it depending on index settings
      *
-     * @param bool $putWarmers Determines if warmers should be loaded.
-     * @param bool $noMapping  Determines if mapping should be included.
      * @throws Exception
      */
-    public function createIndex($putWarmers = false, $noMapping = false)
+    public function createIndex()
     {
         $settings = $this->indexSettings;
-
-        if ($noMapping) {
-            unset($settings['body']['mappings']);
-        }
 
         if (true === $this->getUseAliases()) {
             // Make sure the read and write aliases do not exist already as aliases or physical indices
@@ -294,12 +288,6 @@ class IndexManager
             }
             $this->getConnection()->getClient()->indices()->create($settings);
         }
-
-//        if ($putWarmers) {
-//            // Sometimes Elasticsearch gives service unavailable.
-//            usleep(200000);
-//            $this->putWarmers();
-//        }
     }
 
     /**
