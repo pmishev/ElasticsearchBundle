@@ -174,18 +174,19 @@ class DocumentParser
      */
     private function getPropertiesMetadata(\ReflectionClass $documentReflection)
     {
-        $reflectionName = $documentReflection->getName();
-        if (array_key_exists($reflectionName, $this->propertiesMetadata)) {
-            return $this->propertiesMetadata[$reflectionName];
+        $className = $documentReflection->getName();
+        if (array_key_exists($className, $this->propertiesMetadata)) {
+            return $this->propertiesMetadata[$className];
         }
 
         $propertyMetadata = [];
+
         /** @var \ReflectionProperty $property */
-        foreach ($this->getDocumentPropertiesReflection($documentReflection) as $name => $property) {
+        foreach ($this->getDocumentPropertiesReflection($documentReflection) as $propertyName => $property) {
             $propertyAnnotation = $this->getPropertyAnnotationData($property);
             if ($propertyAnnotation !== null) {
                 $propertyMetadata[$propertyAnnotation->name] = [
-                    'propertyName' => $name,
+                    'propertyName' => $propertyName,
                     'type' => $propertyAnnotation->type,
                 ];
 
@@ -202,7 +203,9 @@ class DocumentParser
                 // If property is a (nested) object
                 if (in_array($propertyAnnotation->type, ['object', 'nested'])) {
                     if (!$propertyAnnotation->objectName) {
-                        throw new \InvalidArgumentException(sprintf('Property "%s" in %s is missing "objectName" setting', $name, $reflectionName));
+                        throw new \InvalidArgumentException(
+                            sprintf('Property "%s" in %s is missing "objectName" setting', $propertyName, $className)
+                        );
                     }
                     $child = new \ReflectionClass($this->documentLocator->resolveClassName($propertyAnnotation->objectName));
                     $propertyMetadata[$propertyAnnotation->name] = array_merge(
@@ -214,12 +217,32 @@ class DocumentParser
                         ]
                     );
                 }
+
+                if ($property->isPublic()) {
+                    $propertyAccess = DocumentMetadata::PROPERTY_ACCESS_PUBLIC;
+                } else {
+                    $propertyAccess = DocumentMetadata::PROPERTY_ACCESS_PRIVATE;
+                    $camelCaseName = ucfirst(Caser::camel($propertyName));
+                    $getterMethod = 'get'.$camelCaseName;
+                    $setterMethod = 'set'.$camelCaseName;
+                    if ($documentReflection->hasMethod($getterMethod) && $documentReflection->hasMethod($setterMethod)) {
+                        $propertyMetadata[$propertyAnnotation->name]['methods'] = [
+                            'getter' => $getterMethod,
+                            'setter' => $setterMethod,
+                        ];
+                    } else {
+                        $message = sprintf('Property "%s" either needs to be public or %s() and %s() methods must be defined', $propertyName, $getterMethod, $setterMethod);
+                        throw new \LogicException($message);
+                    }
+                }
+
+                $propertyMetadata[$propertyAnnotation->name]['propertyAccess'] = $propertyAccess;
             }
         }
 
-        $this->propertiesMetadata[$reflectionName] = $propertyMetadata;
+        $this->propertiesMetadata[$className] = $propertyMetadata;
 
-        return $this->propertiesMetadata[$reflectionName];
+        return $this->propertiesMetadata[$className];
     }
 
     /**
@@ -286,7 +309,7 @@ class DocumentParser
     {
         $mapping = [];
         /** @var \ReflectionProperty $property */
-        foreach ($this->getDocumentPropertiesReflection($documentReflection) as $name => $property) {
+        foreach ($this->getDocumentPropertiesReflection($documentReflection) as $propertyName => $property) {
             $propertyAnnotation = $this->getPropertyAnnotationData($property);
 
             if (empty($propertyAnnotation)) {
@@ -346,15 +369,15 @@ class DocumentParser
      */
     private function getObjectMapping($objectName, array $indexAnalyzers = [])
     {
-        $namespace = $this->documentLocator->resolveClassName($objectName);
+        $className = $this->documentLocator->resolveClassName($objectName);
 
-        if (array_key_exists($namespace, $this->objects)) {
-            return $this->objects[$namespace];
+        if (array_key_exists($className, $this->objects)) {
+            return $this->objects[$className];
         }
 
-        $this->objects[$namespace] = $this->getRelationMapping(new \ReflectionClass($namespace), $indexAnalyzers);
+        $this->objects[$className] = $this->getRelationMapping(new \ReflectionClass($className), $indexAnalyzers);
 
-        return $this->objects[$namespace];
+        return $this->objects[$className];
     }
 
     /**

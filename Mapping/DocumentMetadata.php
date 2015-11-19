@@ -9,6 +9,9 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
  */
 class DocumentMetadata
 {
+    const PROPERTY_ACCESS_PUBLIC = 1;
+    const PROPERTY_ACCESS_PRIVATE = 2;
+
     /**
      * @var array
      */

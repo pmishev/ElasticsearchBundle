@@ -14,7 +14,7 @@ use Sineflow\ElasticsearchBundle\Exception\NoReadAliasException;
 use Sineflow\ElasticsearchBundle\Finder\Finder;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
-use Sineflow\ElasticsearchBundle\Result\Converter;
+use Sineflow\ElasticsearchBundle\Result\DocumentConverter;
 
 /**
  * Manager class.
@@ -47,14 +47,14 @@ class IndexManager
     private $finder;
 
     /**
+     * @var DocumentConverter
+     */
+    private $documentConverter;
+
+    /**
      * @var array
      */
     private $indexSettings;
-
-    /**
-     * @var Converter[]
-     */
-    private $convertersCache;
 
     /**
      * @var RepositoryInterface[]
@@ -87,6 +87,7 @@ class IndexManager
      * @param DocumentMetadataCollector $metadataCollector
      * @param ProviderRegistry          $providerRegistry
      * @param Finder                    $finder
+     * @param DocumentConverter         $documentConverter
      * @param array                     $indexSettings
      * @param string                    $languageSeparator
      */
@@ -96,6 +97,7 @@ class IndexManager
         DocumentMetadataCollector $metadataCollector,
         ProviderRegistry $providerRegistry,
         Finder $finder,
+        DocumentConverter $documentConverter,
         array $indexSettings,
         $languageSeparator)
     {
@@ -104,6 +106,7 @@ class IndexManager
         $this->metadataCollector = $metadataCollector;
         $this->providerRegistry = $providerRegistry;
         $this->finder = $finder;
+        $this->documentConverter = $documentConverter;
         $this->indexSettings = $indexSettings;
         $this->languageSeparator = $languageSeparator;
 
@@ -534,13 +537,8 @@ class IndexManager
      */
     public function persist(DocumentInterface $document)
     {
-        $documentClass = get_class($document);
-        $documentMetadata = $this->metadataCollector->getDocumentMetadata($documentClass);
-        $converter = isset($this->convertersCache[$documentClass]) ?
-            $this->convertersCache[$documentClass] : new Converter($documentMetadata, $this->languageSeparator);
-
-        $documentArray = $converter->convertToArray($document);
-
+        $documentMetadata = $this->metadataCollector->getDocumentMetadata(get_class($document));
+        $documentArray = $this->documentConverter->convertToArray($document);
         $this->persistRaw($documentMetadata->getType(), $documentArray);
     }
 

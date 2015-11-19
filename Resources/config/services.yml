@@ -4,6 +4,7 @@ parameters:
     sfes.profiler.template: SineflowElasticsearchBundle:Profiler:profiler.html.twig
     sfes.mlproperty.language_separator: '-'
 
+    sfes.document_converter.class: Sineflow\ElasticsearchBundle\Result\DocumentConverter
     sfes.provider_registry.class: Sineflow\ElasticsearchBundle\Document\Provider\ProviderRegistry
     sfes.provider_self.class: Sineflow\ElasticsearchBundle\Document\Provider\ElasticsearchProvider
     sfes.index_manager.class: Sineflow\ElasticsearchBundle\Manager\IndexManager
@@ -19,6 +20,11 @@ parameters:
     sfes.knp_paginate_query_subscriber_class: Sineflow\ElasticsearchBundle\Subscriber\KnpPaginateQuerySubscriber
 
 services:
+    sfes.document_converter:
+        class: %sfes.document_converter.class%
+        arguments: [@sfes.document_metadata_collector, %sfes.mlproperty.language_separator%]
+
+
     sfes.provider_registry:
         class: %sfes.provider_registry.class%
         calls:
@@ -26,7 +32,7 @@ services:
 
     sfes.index_manager_factory:
         class: %sfes.index_manager_factory.class%
-        arguments: [@sfes.document_metadata_collector, @sfes.provider_registry, @sfes.finder, %sfes.mlproperty.language_separator%]
+        arguments: [@sfes.document_metadata_collector, @sfes.provider_registry, @sfes.finder, @sfes.document_converter, %sfes.mlproperty.language_separator%]
         public: false
 
     sfes.index_manager_registry:
@@ -37,7 +43,7 @@ services:
 
     sfes.finder:
         class: %sfes.finder.class%
-        arguments: [@sfes.document_metadata_collector, @sfes.index_manager_registry, %sfes.mlproperty.language_separator%]
+        arguments: [@sfes.document_metadata_collector, @sfes.index_manager_registry, @sfes.document_converter, %sfes.mlproperty.language_separator%]
 
     sfes.document_locator:
         class: %sfes.document_locator.class%

@@ -2,27 +2,28 @@
 
 namespace Sineflow\ElasticsearchBundle\Result;
 
-use Sineflow\ElasticsearchBundle\DTO\IndicesAndTypesMetadataCollection;
+use Sineflow\ElasticsearchBundle\Document\DocumentInterface;
+use Sineflow\ElasticsearchBundle\DTO\TypesToDocumentClasses;
 
 /**
- * This class is able to iterate over Elasticsearch result documents while casting data into models.
+ * This class is able to iterate over Elasticsearch result documents while casting data into objects
  */
-class DocumentIterator extends AbstractResultsIterator
+class DocumentIterator implements \Countable, \Iterator
 {
     /**
      * @var array
      */
     private $rawData;
 
-    /**
-     * @var IndicesAndTypesMetadataCollection
+    /**AbstractResultsIterator
+     * @var DocumentConverter
      */
-    private $typesMetadataCollection;
+    private $documentConverter;
 
     /**
-     * @var string
+     * @var TypesToDocumentClasses
      */
-    private $languageSeparator;
+    private $typesToDocumentClasses;
 
     /**
      * @var array
@@ -30,23 +31,34 @@ class DocumentIterator extends AbstractResultsIterator
     private $suggestions = [];
 
     /**
+     * @var array
+     */
+    private $aggregations = [];
+
+    /**
+     * @var array
+     */
+    private $documents = [];
+
+    /**
      * Constructor.
      *
-     * @param array                             $rawData
-     * @param IndicesAndTypesMetadataCollection $typesMetadataCollection
-     * @param string                            $languageSeparator
+     * @param array                  $rawData
+     * @param DocumentConverter      $documentConverter
+     * @param TypesToDocumentClasses $typesToDocumentClasses
      */
-    public function __construct($rawData, IndicesAndTypesMetadataCollection $typesMetadataCollection, $languageSeparator)
+    public function __construct($rawData, DocumentConverter $documentConverter, TypesToDocumentClasses $typesToDocumentClasses)
     {
         $this->rawData = $rawData;
-        $this->typesMetadataCollection = $typesMetadataCollection;
-        $this->languageSeparator = $languageSeparator;
+        $this->documentConverter = $documentConverter;
+        $this->typesToDocumentClasses = $typesToDocumentClasses;
 
         if (isset($rawData['suggest'])) {
-            $this->suggestions = $rawData['suggest'];
+            $this->suggestions = &$rawData['suggest'];
         }
-
-        // Alias documents to have shorter path.
+        if (isset($rawData['aggregations'])) {
+            $this->aggregations = &$rawData['aggregations'];
+        }
         if (isset($rawData['hits']['hits'])) {
             $this->documents = &$rawData['hits']['hits'];
         }
@@ -61,18 +73,69 @@ class DocumentIterator extends AbstractResultsIterator
     }
 
     /**
-     * Returns a converter.
-     *
-     * @param string $index
-     * @param string $type
-     * @return Converter
+     * @return array
      */
-    protected function getConverter($index, $type)
+    public function getAggregations()
     {
-        $metadata = $this->typesMetadataCollection->getTypeMetadata($type, $index);
-        $converter = new Converter($metadata, $this->languageSeparator);
+        return $this->aggregations;
+    }
 
-        return $converter;
+    /**
+     * Returns total count of records matching the query.
+     *
+     * @return int
+     */
+    public function getTotalCount()
+    {
+        return $this->rawData['hits']['total'];
+    }
+
+    /**
+     * @return int
+     */
+    public function count()
+    {
+        return count($this->documents);
+    }
+
+    /**
+     * @return DocumentInterface
+     */
+    public function current()
+    {
+        return $this->convertToDocument($this->documents[$this->key()]);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function next()
+    {
+        next($this->documents);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function key()
+    {
+        return key($this->documents);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function valid()
+    {
+        return $this->key() !== null;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function rewind()
+    {
+        reset($this->documents);
     }
 
     /**
@@ -84,18 +147,11 @@ class DocumentIterator extends AbstractResultsIterator
      *
      * @throws \LogicException
      */
-    protected function convertDocument($rawData)
+    private function convertToDocument($rawData)
     {
-        return $this->getConverter($rawData['_index'], $rawData['_type'])->convertToDocument($rawData);
+        $documentClass = $this->typesToDocumentClasses->get($rawData['_index'], $rawData['_type']);
+
+        return $this->documentConverter->convertToDocument($rawData, $documentClass);
     }
 
-    /**
-     * Returns count of records found by given query.
-     *
-     * @return int
-     */
-    public function getTotalCount()
-    {
-        return $this->rawData['hits']['total'];
-    }
 }

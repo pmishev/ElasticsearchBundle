@@ -2,10 +2,8 @@
 
 namespace Sineflow\ElasticsearchBundle\Document\Repository;
 
-use Elasticsearch\Common\Exceptions\Missing404Exception;
 use Sineflow\ElasticsearchBundle\Document\DocumentInterface;
 use Sineflow\ElasticsearchBundle\Finder\Finder;
-use Sineflow\ElasticsearchBundle\Result\Converter;
 use Sineflow\ElasticsearchBundle\Manager\IndexManager;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
 

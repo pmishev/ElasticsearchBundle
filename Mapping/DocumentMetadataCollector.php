@@ -131,7 +131,8 @@ class DocumentMetadataCollector
     }
 
     /**
-     * Returns metadata for the specified document class short name (e.g AppBundle:Product)
+     * Returns metadata for the specified document class name.
+     * Class can also be specified in short notation (e.g AppBundle:Product)
      *
      * @param string $documentClass
      * @return DocumentMetadata
@@ -173,7 +174,7 @@ class DocumentMetadataCollector
      * @param array $documentClasses Only return those classes if specified
      * @return array
      */
-    public function getClassToTypeMap(array $documentClasses = [])
+    public function getDocumentClassesTypes(array $documentClasses = [])
     {
         $result = [];
         foreach ($this->metadata as $index => $documentsMetadata) {
@@ -191,17 +192,22 @@ class DocumentMetadataCollector
     }
 
     /**
-     * Returns all document classes in the collection as keys and the corresponding index manager that manages them as values
+     * Returns all document classes as keys and the corresponding index manager that manages them as values
      *
+     * @param array $documentClasses Only return those classes if specified
      * @return array
      */
-    public function getDocumentClassesIndices()
+    public function getDocumentClassesIndices(array $documentClasses = [])
     {
         $result = [];
-        foreach ($this->metadata as $index => $types) {
-            foreach ($types as $typeDocumentClass => $documentMetadata) {
-                $result[$typeDocumentClass] = $index;
+        foreach ($this->metadata as $index => $documentsMetadata) {
+            foreach ($documentsMetadata as $documentClass => $documentMetadata) {
+                $result[$documentClass] = $index;
             }
+        }
+
+        if ($documentClasses) {
+            $result = array_intersect_key($result, array_flip($documentClasses));
         }
 
         return $result;

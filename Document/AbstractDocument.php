@@ -11,135 +11,38 @@ abstract class AbstractDocument implements DocumentInterface
 {
     /**
      * @var string
+     *
+     * @ES\Property(type="string", name="_id")
      */
-    private $id;
+    public $id;
 
     /**
      * @var string
+     *
+     * @ES\Property(type="float", name="_score")
      */
-    private $score;
+    public $score;
 
     /**
      * @var string
+     *
+     * @ES\Property(type="string", name="_parent")
      */
-    private $parent;
+    public $parent;
 
     /**
      * @var string
+     *
+     * @ES\Property(type="string", name="_ttl")
      */
-    private $ttl;
+    public $ttl;
 
     /**
      * When document is cloned id is set to null.
      */
     public function __clone()
     {
-        $this->setId(null);
+        $this->id = null;
     }
 
-    /**
-     * Sets document unique id.
-     *
-     * @param string $documentId
-     *
-     * @return $this
-     */
-    public function setId($documentId)
-    {
-        $this->id = $documentId;
-
-        return $this;
-    }
-
-    /**
-     * Returns document id.
-     *
-     * @return string
-     */
-    public function getId()
-    {
-        return $this->id;
-    }
-
-    /**
-     * Sets document score.
-     *
-     * @param string $documentScore
-     *
-     * @return $this
-     */
-    public function setScore($documentScore)
-    {
-        $this->score = $documentScore;
-
-        return $this;
-    }
-
-    /**
-     * Gets document score.
-     *
-     * @return string
-     */
-    public function getScore()
-    {
-        return $this->score;
-    }
-
-    /**
-     * Sets parent document id.
-     *
-     * @param string $parent
-     *
-     * @return $this
-     */
-    public function setParent($parent)
-    {
-        $this->parent = $parent;
-
-        return $this;
-    }
-
-    /**
-     * Returns parent document id.
-     *
-     * @return null|string
-     */
-    public function getParent()
-    {
-        return $this->parent;
-    }
-
-    /**
-     * Checks if document has a parent.
-     *
-     * @return bool
-     */
-    public function hasParent()
-    {
-        return $this->parent !== null;
-    }
-
-    /**
-     * Sets time to live timestamp.
-     *
-     * @param string $ttl
-     *
-     * @return $this
-     */
-    public function setTtl($ttl)
-    {
-        $this->ttl = $ttl;
-
-        return $this;
-    }
-
-    /**
-     * Returns time to live value.
-     *
-     * @return int
-     */
-    public function getTtl()
-    {
-        return $this->ttl;
-    }
 }

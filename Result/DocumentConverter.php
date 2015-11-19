@@ -1,0 +1,210 @@
+<?php
+
+namespace Sineflow\ElasticsearchBundle\Result;
+
+use Sineflow\ElasticsearchBundle\Document\DocumentInterface;
+use Sineflow\ElasticsearchBundle\Document\MLProperty;
+use Sineflow\ElasticsearchBundle\Mapping\ClassMetadata;
+use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
+use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
+
+/**
+ * Converter from array to document object and vice versa
+ */
+class DocumentConverter
+{
+    /**
+     * @var DocumentMetadataCollector
+     */
+    private $metadataCollector;
+
+    /**
+     * @var string
+     */
+    private $languageSeparator;
+
+    /**
+     * Constructor.
+     *
+     * @param DocumentMetadataCollector $metadataCollector
+     * @param string                    $languageSeparator
+     */
+    public function __construct(DocumentMetadataCollector $metadataCollector, $languageSeparator)
+    {
+        $this->metadataCollector = $metadataCollector;
+        $this->languageSeparator = $languageSeparator;
+    }
+
+
+    /**
+     * Converts raw array to document.
+     *
+     * @param array  $rawData
+     * @param string $documentClass Document class in short notation (e.g. AppBundle:Product)
+     *
+     * @return DocumentInterface
+     */
+    public function convertToDocument($rawData, $documentClass)
+    {
+        // Get document metadata
+        $metadata = $this->metadataCollector->getDocumentMetadata($documentClass);
+
+        switch (true) {
+            case isset($rawData['_source']):
+                $data = $rawData['_source'];
+                break;
+
+            case isset($rawData['fields']):
+                $data = array_map('reset', $rawData['fields']);
+                /** Check for partial fields as well (@see https://www.elastic.co/guide/en/elasticsearch/reference/1.4/search-request-fields.html) */
+                foreach ($data as $key => $field) {
+                    if (is_array($field)) {
+                        $data = array_merge($data, $field);
+                        unset($data[$key]);
+                    }
+                }
+                break;
+
+            default:
+                $data = [];
+        }
+
+        // Add special fields to data
+        foreach (['_id', '_score'] as $specialField) {
+            if (isset($rawData[$specialField])) {
+                $data[$specialField] = $rawData[$specialField];
+            }
+        }
+
+        /** @var DocumentInterface $object */
+        $className = $metadata->getClassName();
+        $object = $this->assignArrayToObject($data, new $className(), $metadata->getPropertiesMetadata());
+
+        return $object;
+    }
+
+    /**
+     * Assigns all properties to object.
+     *
+     * @param array  $array              Flat array with fields and their value
+     * @param object $object             A document or a (nested) object object
+     * @param array  $propertiesMetadata
+     *
+     * @return object
+     */
+    public function assignArrayToObject(array $array, $object, array $propertiesMetadata)
+    {
+        foreach ($propertiesMetadata as $esField => $propertyMetadata) {
+            // Skip fields from the mapping that have no value set, unless they are multilanguage fields
+            if (empty($propertyMetadata['multilanguage']) && !isset($array[$esField])) {
+                continue;
+            }
+
+            if ($propertyMetadata['type'] === 'string' && !empty($propertyMetadata['multilanguage'])) {
+                $objectValue = new MLProperty();
+                foreach ($array as $fieldName => $value) {
+                    $prefixLength = strlen($esField . $this->languageSeparator);
+                    if (substr($fieldName, 0, $prefixLength) === $esField . $this->languageSeparator) {
+                        $language = substr($fieldName, $prefixLength);
+                        $objectValue->setValue($value, $language);
+                    }
+                }
+
+            } elseif (in_array($propertyMetadata['type'], ['object', 'nested'])) {
+                if ($propertyMetadata['multiple']) {
+                    $objectValue = new ObjectIterator($this, $array[$esField], $propertyMetadata);
+                } else {
+                    $objectValue = $this->assignArrayToObject(
+                        $array[$esField],
+                        new $propertyMetadata['className'](),
+                        $propertyMetadata['propertiesMetadata']
+                    );
+                }
+
+            } else {
+                $objectValue = $array[$esField];
+            }
+
+            if ($propertyMetadata['propertyAccess'] == DocumentMetadata::PROPERTY_ACCESS_PRIVATE) {
+                $object->{$propertyMetadata['methods']['setter']}($objectValue);
+            } else {
+                $object->{$propertyMetadata['propertyName']} = $objectValue;
+            }
+        }
+
+        return $object;
+    }
+
+    /**
+     * Converts document or (nested) object to an array.
+     *
+     * @param mixed $object             Can be instance of DocumentInterface or a (nested) object
+     * @param array $propertiesMetadata
+     *
+     * @return array
+     */
+    public function convertToArray($object, $propertiesMetadata = [])
+    {
+        if (empty($propertiesMetadata)) {
+            $propertiesMetadata = $this->metadataCollector->getDocumentMetadata(get_class($object))->getPropertiesMetadata();
+        }
+
+        $array = [];
+
+        foreach ($propertiesMetadata as $name => $propertyMetadata) {
+            if ($propertyMetadata['propertyAccess'] == DocumentMetadata::PROPERTY_ACCESS_PRIVATE) {
+                $value = $object->{$propertyMetadata['methods']['getter']}();
+            } else {
+                $value = $object->{$propertyMetadata['propertyName']};
+            }
+
+            if (isset($value)) {
+                if (array_key_exists('propertiesMetadata', $propertyMetadata)) {
+                    $new = [];
+                    if ($propertyMetadata['multiple']) {
+                        // Verify value is traversable
+                        if (!(is_array($value) || (is_object($value) && $value instanceof \Traversable))) {
+                            throw new \InvalidArgumentException(sprintf('Value of "%s" is not traversable, although field is set to "multiple"'));
+                        }
+
+                        foreach ($value as $item) {
+                            $this->checkVariableType($item, $propertyMetadata['className']);
+                            $new[] = $this->convertToArray($item, $propertyMetadata['propertiesMetadata']);
+                        }
+                    } else {
+                        $this->checkVariableType($value, $propertyMetadata['className']);
+                        $new = $this->convertToArray($value, $propertyMetadata['propertiesMetadata']);
+                    }
+                    $value = $new;
+                }
+
+                if ($value instanceof MLProperty) {
+                    foreach ($value->getValues() as $language => $langValue) {
+                        $array[$name . $this->languageSeparator . $language] = $langValue;
+                    }
+                } else {
+                    $array[$name] = $value;
+                }
+            }
+        }
+
+        return $array;
+    }
+
+    /**
+     * Check if object is the correct type
+     *
+     * @param object $object
+     * @param array  $expectedClass
+     *
+     * @throws \InvalidArgumentException
+     */
+    private function checkVariableType($object, $expectedClass)
+    {
+        if (!is_object($object) || get_class($object) !== $expectedClass) {
+            throw new \InvalidArgumentException(
+                sprintf('Expected object of type "%s", got "%s"', $expectedClass, get_class($object))
+            );
+        }
+    }
+}

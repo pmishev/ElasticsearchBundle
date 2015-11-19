@@ -5,6 +5,7 @@ namespace Sineflow\ElasticsearchBundle\Manager;
 use Sineflow\ElasticsearchBundle\Document\Provider\ProviderRegistry;
 use Sineflow\ElasticsearchBundle\Finder\Finder;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
+use Sineflow\ElasticsearchBundle\Result\DocumentConverter;
 
 /**
  * Factory for index manager services
@@ -27,6 +28,11 @@ class IndexManagerFactory
     private $finder;
 
     /**
+     * @var DocumentConverter
+     */
+    private $documentConverter;
+
+    /**
      * @var string The separator string between property names and language codes for ML properties
      */
     private $languageSeparator;
@@ -40,17 +46,20 @@ class IndexManagerFactory
      * @param DocumentMetadataCollector $metadataCollector
      * @param ProviderRegistry          $providerRegistry
      * @param Finder                    $finder
+     * @param DocumentConverter         $documentConverter
      * @param string                    $languageSeparator
      */
     public function __construct(
         DocumentMetadataCollector $metadataCollector,
         ProviderRegistry $providerRegistry,
         Finder $finder,
+        DocumentConverter $documentConverter,
         $languageSeparator)
     {
         $this->metadataCollector = $metadataCollector;
         $this->providerRegistry = $providerRegistry;
         $this->finder = $finder;
+        $this->documentConverter = $documentConverter;
         $this->languageSeparator = $languageSeparator;
     }
 
@@ -71,6 +80,7 @@ class IndexManagerFactory
             $this->metadataCollector,
             $this->providerRegistry,
             $this->finder,
+            $this->documentConverter,
             $this->getIndexParams($managerName, $indexSettings),
             $this->languageSeparator
         );

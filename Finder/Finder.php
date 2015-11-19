@@ -3,12 +3,12 @@
 namespace Sineflow\ElasticsearchBundle\Finder;
 
 use Elasticsearch\Common\Exceptions\Missing404Exception;
+use Sineflow\ElasticsearchBundle\DTO\TypesToDocumentClasses;
 use Sineflow\ElasticsearchBundle\Manager\ConnectionManager;
 use Sineflow\ElasticsearchBundle\Manager\IndexManagerRegistry;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
-use Sineflow\ElasticsearchBundle\DTO\IndicesAndTypesMetadataCollection;
 use Sineflow\ElasticsearchBundle\Paginator\KnpPaginatorAdapter;
-use Sineflow\ElasticsearchBundle\Result\Converter;
+use Sineflow\ElasticsearchBundle\Result\DocumentConverter;
 use Sineflow\ElasticsearchBundle\Result\DocumentIterator;
 
 /**
@@ -35,6 +35,11 @@ class Finder
     private $indexManagerRegistry;
 
     /**
+     * @var DocumentConverter
+     */
+    private $documentConverter;
+
+    /**
      * @var string
      */
     private $languageSeparator;
@@ -43,12 +48,18 @@ class Finder
      * Finder constructor.
      * @param DocumentMetadataCollector $documentMetadataCollector
      * @param IndexManagerRegistry      $indexManagerRegistry
+     * @param DocumentConverter         $documentConverter
      * @param string                    $languageSeparator
      */
-    public function __construct(DocumentMetadataCollector $documentMetadataCollector, IndexManagerRegistry $indexManagerRegistry, $languageSeparator)
+    public function __construct(
+        DocumentMetadataCollector $documentMetadataCollector,
+        IndexManagerRegistry $indexManagerRegistry,
+        DocumentConverter $documentConverter,
+        $languageSeparator)
     {
         $this->documentMetadataCollector = $documentMetadataCollector;
         $this->indexManagerRegistry = $indexManagerRegistry;
+        $this->documentConverter = $documentConverter;
         $this->languageSeparator = $languageSeparator;
     }
 
@@ -82,7 +93,7 @@ class Finder
 
         switch ($resultType & self::BITMASK_RESULT_TYPES) {
             case self::RESULTS_OBJECT:
-                return (new Converter($documentMetadata, $this->languageSeparator))->convertToDocument($raw);
+                return $this->documentConverter->convertToDocument($raw, $documentClass);
             case self::RESULTS_ARRAY:
                 return $this->convertToNormalizedArray($raw);
             case self::RESULTS_RAW:
@@ -188,76 +199,52 @@ class Finder
      * Returns a mapping of live indices and types to the document classes in short notation that represent them
      *
      * @param string[] $documentClasses
-     * @return IndicesAndTypesMetadataCollection
+     * @return TypesToDocumentClasses
      */
-    private function getIndicesAndTypesMetadataCollection(array $documentClasses)
+    private function getTypesToDocumentClasses(array $documentClasses)
     {
-        $allDocumentClassToIndexMappings = $this->documentMetadataCollector->getDocumentClassesIndices();
-        $documentClassToIndexMap = array_intersect_key($allDocumentClassToIndexMappings, array_flip($documentClasses));
-        $typesMetadataCollection = new IndicesAndTypesMetadataCollection();
+        $typesToDocumentClasses = new TypesToDocumentClasses();
+
+        $documentClassToIndexMap = $this->documentMetadataCollector->getDocumentClassesIndices($documentClasses);
+        $documentClassToTypeMap = $this->documentMetadataCollector->getDocumentClassesTypes($documentClasses);
 
         $getLiveIndices = false;
-        $classToTypeMap = $this->documentMetadataCollector->getClassToTypeMap($documentClasses);
         // If there are duplicate type names across the indices we're querying
-        if (count($classToTypeMap) > count(array_unique($classToTypeMap))) {
+        if (count($documentClassToTypeMap) > count(array_unique($documentClassToTypeMap))) {
             // We'll need to get the live index name for each type, so we can correctly map the results to the appropriate objects
             $getLiveIndices = true;
         }
 
         foreach ($documentClassToIndexMap as $documentClass => $indexManagerName) {
-            // Build mappings of indices and types to metadata, for the Converter
+            // Build mappings of indices and types to document class names, for the Converter
             $liveIndex = $getLiveIndices ? $this->indexManagerRegistry->get($indexManagerName)->getLiveIndex() : null;
-            $documentMetadata = $this->documentMetadataCollector->getDocumentMetadata($documentClass);
-            $typesMetadataCollection->setTypeMetadata($documentMetadata, $liveIndex);
+            $typesToDocumentClasses->set($liveIndex, $documentClassToTypeMap[$documentClass], $documentClass);
         }
 
-        return $typesMetadataCollection;
+        return $typesToDocumentClasses;
     }
+
 
     private function parseResult($raw, $resultsType, array $documentClasses = null)
     {
         switch ($resultsType & self::BITMASK_RESULT_TYPES) {
             case self::RESULTS_OBJECT:
-                // TODO: add the DocumentScanIterator
-//                if (isset($raw['_scroll_id'])) {
-//                    $iterator = new DocumentScanIterator(
-//                        $raw,
-//                        $this->getManager()->getTypesMapping(),
-//                        $this->getManager()->getBundlesMapping()
-//                    );
-//                    $iterator
-//                        ->setRepository($this)
-//                        ->setScrollDuration($scrollDuration)
-//                        ->setScrollId($raw['_scroll_id']);
-//
-//                    return $iterator;
-//                }
-
                 if (empty($documentClasses)) {
                     throw new \InvalidArgumentException('$documentClasses must be specified when retrieving results as objects');
                 }
 
                 return new DocumentIterator(
                     $raw,
-                    $this->getIndicesAndTypesMetadataCollection($documentClasses),
-                    $this->languageSeparator
+                    $this->documentConverter,
+                    $this->getTypesToDocumentClasses($documentClasses)
                 );
+
             case self::RESULTS_ARRAY:
                 return $this->convertToNormalizedArray($raw);
+
             case self::RESULTS_RAW:
                 return $raw;
-//            case self::RESULTS_RAW_ITERATOR:
-//                if (isset($raw['_scroll_id'])) {
-//                    $iterator = new RawResultScanIterator($raw);
-//                    $iterator
-//                        ->setRepository($this)
-//                        ->setScrollDuration($scrollDuration)
-//                        ->setScrollId($raw['_scroll_id']);
-//
-//                    return $iterator;
-//                }
-//
-//                return new RawResultIterator($raw);
+
             default:
                 throw new \InvalidArgumentException('Wrong results type selected');
         }
