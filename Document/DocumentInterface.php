@@ -3,8 +3,8 @@
 namespace Sineflow\ElasticsearchBundle\Document;
 
 /**
- * Interface for ES Documents.
+ * Interface for Elasticsearch documents.
  */
-interface DocumentInterface
+interface DocumentInterface extends ObjectInterface
 {
 }

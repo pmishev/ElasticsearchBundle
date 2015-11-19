@@ -4,6 +4,7 @@ namespace Sineflow\ElasticsearchBundle\Result;
 
 use Sineflow\ElasticsearchBundle\Document\DocumentInterface;
 use Sineflow\ElasticsearchBundle\Document\MLProperty;
+use Sineflow\ElasticsearchBundle\Document\ObjectInterface;
 use Sineflow\ElasticsearchBundle\Mapping\ClassMetadata;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
@@ -76,23 +77,23 @@ class DocumentConverter
             }
         }
 
-        /** @var DocumentInterface $object */
+        /** @var DocumentInterface $document */
         $className = $metadata->getClassName();
-        $object = $this->assignArrayToObject($data, new $className(), $metadata->getPropertiesMetadata());
+        $document = $this->assignArrayToObject($data, new $className(), $metadata->getPropertiesMetadata());
 
-        return $object;
+        return $document;
     }
 
     /**
      * Assigns all properties to object.
      *
-     * @param array  $array              Flat array with fields and their value
-     * @param object $object             A document or a (nested) object object
-     * @param array  $propertiesMetadata
+     * @param array           $array              Flat array with fields and their value
+     * @param ObjectInterface $object             A document or a (nested) object
+     * @param array           $propertiesMetadata
      *
-     * @return object
+     * @return ObjectInterface
      */
-    public function assignArrayToObject(array $array, $object, array $propertiesMetadata)
+    public function assignArrayToObject(array $array, ObjectInterface $object, array $propertiesMetadata)
     {
         foreach ($propertiesMetadata as $esField => $propertyMetadata) {
             // Skip fields from the mapping that have no value set, unless they are multilanguage fields
@@ -138,12 +139,12 @@ class DocumentConverter
     /**
      * Converts document or (nested) object to an array.
      *
-     * @param mixed $object             Can be instance of DocumentInterface or a (nested) object
-     * @param array $propertiesMetadata
+     * @param ObjectInterface $object             A document or a (nested) object
+     * @param array           $propertiesMetadata
      *
      * @return array
      */
-    public function convertToArray($object, $propertiesMetadata = [])
+    public function convertToArray(ObjectInterface $object, $propertiesMetadata = [])
     {
         if (empty($propertiesMetadata)) {
             $propertiesMetadata = $this->metadataCollector->getDocumentMetadata(get_class($object))->getPropertiesMetadata();
@@ -159,6 +160,7 @@ class DocumentConverter
             }
 
             if (isset($value)) {
+                // If this is a (nested) object
                 if (array_key_exists('propertiesMetadata', $propertyMetadata)) {
                     $new = [];
                     if ($propertyMetadata['multiple']) {
@@ -168,11 +170,11 @@ class DocumentConverter
                         }
 
                         foreach ($value as $item) {
-                            $this->checkVariableType($item, $propertyMetadata['className']);
+                            $this->checkObjectType($item, $propertyMetadata['className']);
                             $new[] = $this->convertToArray($item, $propertyMetadata['propertiesMetadata']);
                         }
                     } else {
-                        $this->checkVariableType($value, $propertyMetadata['className']);
+                        $this->checkObjectType($value, $propertyMetadata['className']);
                         $new = $this->convertToArray($value, $propertyMetadata['propertiesMetadata']);
                     }
                     $value = $new;
@@ -194,14 +196,14 @@ class DocumentConverter
     /**
      * Check if object is the correct type
      *
-     * @param object $object
+     * @param ObjectInterface $object
      * @param array  $expectedClass
      *
      * @throws \InvalidArgumentException
      */
-    private function checkVariableType($object, $expectedClass)
+    private function checkObjectType(ObjectInterface $object, $expectedClass)
     {
-        if (!is_object($object) || get_class($object) !== $expectedClass) {
+        if (get_class($object) !== $expectedClass) {
             throw new \InvalidArgumentException(
                 sprintf('Expected object of type "%s", got "%s"', $expectedClass, get_class($object))
             );
