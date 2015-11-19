@@ -327,7 +327,7 @@ class DocumentParser
                 foreach ($this->languageProvider->getLanguages() as $language) {
                     $mapping[$propertyAnnotation->name . $this->languageSeparator . $language] = $this->getPropertyMapping($propertyAnnotation, $language, $indexAnalyzers);
                 }
-                // TODO: This is a temporary hardcode. The application should decide whether it wants to use a default field at all and set its mapping on a global base (or per property?)
+                // TODO: The application should decide whether it wants to use a default field at all and set its mapping on a global base (or per property?)
                 // The custom mapping from the application should be set here, using perhaps some kind of decorator
                 $mapping[$propertyAnnotation->name . $this->languageSeparator . MLProperty::DEFAULT_LANG_SUFFIX] = [
                     'type' => 'string',

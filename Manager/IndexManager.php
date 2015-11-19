@@ -518,15 +518,33 @@ class IndexManager
      */
     public function reindex($documentClass, $id)
     {
+        $documentMetadata = $this->metadataCollector->getDocumentMetadata($documentClass);
+
         $dataProvider = $this->getDataProvider($documentClass);
         $document = $dataProvider->getDocument($id);
-        // TODO: verify that the id of the returned document matches $id
-        if (is_array($document)) {
-            $documentMetadata = $this->metadataCollector->getDocumentMetadata($documentClass);
-            $this->persistRaw($documentMetadata->getType(), $document);
-        } else {
-            $this->persist($document);
+
+        switch (true) {
+            case $document instanceof DocumentInterface:
+                if (get_class($document) !== $documentMetadata->getClassName()) {
+                    throw new \RuntimeException(sprintf('Document must be "%s", but "%s" was returned from data provider', $documentMetadata->getClassName(), get_class($document)));
+                }
+                $this->persist($document);
+                break;
+
+            case is_array($document):
+                if (!isset($document['_id'])) {
+                    throw new \RuntimeException(sprintf('The returned document array must include an "_id" field: (%s)', serialize($document)));
+                }
+                if ($document['_id'] !== $id) {
+                    throw new \RuntimeException(sprintf('The document id must be "%s", but "%s" was returned from data provider', $id, $document['_id']));
+                }
+                $this->persistRaw($documentMetadata->getType(), $document);
+                break;
+
+            default:
+                throw new \RuntimeException('Document must be either a DocumentInterface instance or an array with raw data');
         }
+
         $this->commit();
     }
 
