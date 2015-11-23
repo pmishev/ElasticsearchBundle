@@ -4,9 +4,8 @@ namespace Sineflow\ElasticsearchBundle\Mapping;
 
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\Reader;
-use Sineflow\ElasticsearchBundle\Annotation\AbstractProperty;
 use Sineflow\ElasticsearchBundle\Annotation\Document;
-use Sineflow\ElasticsearchBundle\Annotation\MLProperty;
+use Sineflow\ElasticsearchBundle\Annotation\Property;
 use Sineflow\ElasticsearchBundle\LanguageProvider\LanguageProviderInterface;
 
 /**
@@ -17,7 +16,7 @@ class DocumentParser
     /**
      * @const string
      */
-    const PROPERTY_ANNOTATION = 'Sineflow\ElasticsearchBundle\Annotation\AbstractProperty';
+    const PROPERTY_ANNOTATION = 'Sineflow\ElasticsearchBundle\Annotation\Property';
 
     /**
      * @const string
@@ -148,7 +147,7 @@ class DocumentParser
      *
      * @param \ReflectionProperty $property
      *
-     * @return AbstractProperty
+     * @return Property
      */
     public function getPropertyAnnotationData($property)
     {
@@ -189,12 +188,8 @@ class DocumentParser
                 $propertyMetadata[$propertyAnnotation->name] = [
                     'propertyName' => $propertyName,
                     'type' => $propertyAnnotation->type,
+                    'multilanguage' => $propertyAnnotation->multilanguage,
                 ];
-
-                // If property is multilanguage
-                if ($propertyAnnotation instanceof MLProperty) {
-                    $propertyMetadata[$propertyAnnotation->name]['multilanguage'] = true;
-                }
 
                 // If property is a (nested) object
                 if (in_array($propertyAnnotation->type, ['object', 'nested'])) {
@@ -313,19 +308,19 @@ class DocumentParser
             }
 
             // If it is a multi-language property
-            if ($propertyAnnotation instanceof MLProperty) {
+            if (true === $propertyAnnotation->multilanguage) {
                 if ($propertyAnnotation->type != 'string') {
-                    throw new \InvalidArgumentException(sprintf('"%s" property in %s is declared as "MLProperty", so can only be of type "string"', $propertyAnnotation->name, $documentReflection->getName()));
+                    throw new \InvalidArgumentException(sprintf('"%s" property in %s is declared as multilanguage, so can only be of type "string"', $propertyAnnotation->name, $documentReflection->getName()));
                 }
                 if (!$this->languageProvider) {
-                    throw new \InvalidArgumentException('There must be a service tagged as "sfes.language_provider" in order to use MLProperty');
+                    throw new \InvalidArgumentException('There must be a service tagged as "sfes.language_provider" in order to use multilanguage properties');
                 }
                 foreach ($this->languageProvider->getLanguages() as $language) {
                     $mapping[$propertyAnnotation->name . $this->languageSeparator . $language] = $this->getPropertyMapping($propertyAnnotation, $language, $indexAnalyzers);
                 }
                 // TODO: The application should decide whether it wants to use a default field at all and set its mapping on a global base (or per property?)
                 // The custom mapping from the application should be set here, using perhaps some kind of decorator
-                $mapping[$propertyAnnotation->name . $this->languageSeparator . MLProperty::DEFAULT_LANG_SUFFIX] = [
+                $mapping[$propertyAnnotation->name . $this->languageSeparator . Property::DEFAULT_LANG_SUFFIX] = [
                     'type' => 'string',
                     'index' => 'not_analyzed'
                 ];
@@ -338,7 +333,7 @@ class DocumentParser
         return $mapping;
     }
 
-    private function getPropertyMapping(AbstractProperty $propertyAnnotation, $language = null, array $indexAnalyzers = [])
+    private function getPropertyMapping(Property $propertyAnnotation, $language = null, array $indexAnalyzers = [])
     {
         $propertyMapping = $propertyAnnotation->dump([
             'language' => $language,
