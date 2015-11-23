@@ -122,6 +122,12 @@ class DocumentConverter
                     );
                 }
 
+            } elseif ($propertyMetadata['type'] === 'date') {
+                $objectValue = \DateTime::createFromFormat(
+                    isset($propertyMetadata['format']) ? $propertyMetadata['format'] : \DateTime::ISO8601,
+                    $array[$esField]
+                );
+
             } else {
                 $objectValue = $array[$esField];
             }
@@ -160,7 +166,7 @@ class DocumentConverter
             }
 
             if (isset($value)) {
-                // If this is a (nested) object
+                // If this is a (nested) object or a list of such
                 if (array_key_exists('propertiesMetadata', $propertyMetadata)) {
                     $new = [];
                     if ($propertyMetadata['multiple']) {
@@ -177,13 +183,16 @@ class DocumentConverter
                         $this->checkObjectType($value, $propertyMetadata['className']);
                         $new = $this->convertToArray($value, $propertyMetadata['propertiesMetadata']);
                     }
-                    $value = $new;
-                }
+                    $array[$name] = $new;
 
-                if ($value instanceof MLProperty) {
+                } elseif ($value instanceof MLProperty) {
                     foreach ($value->getValues() as $language => $langValue) {
                         $array[$name . $this->languageSeparator . $language] = $langValue;
                     }
+
+                } elseif ($value instanceof \DateTime) {
+                    $array[$name] = $value->format(isset($propertyMetadata['format']) ? $propertyMetadata['format'] : \DateTime::ISO8601);
+
                 } else {
                     $array[$name] = $value;
                 }

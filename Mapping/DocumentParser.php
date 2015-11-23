@@ -184,20 +184,21 @@ class DocumentParser
         /** @var \ReflectionProperty $property */
         foreach ($this->getDocumentPropertiesReflection($documentReflection) as $propertyName => $property) {
             $propertyAnnotation = $this->getPropertyAnnotationData($property);
+
             if ($propertyAnnotation !== null) {
                 $propertyMetadata[$propertyAnnotation->name] = [
                     'propertyName' => $propertyName,
                     'type' => $propertyAnnotation->type,
                 ];
 
+                // If property is date and a custom format is set
+                if (isset($propertyAnnotation->options['format'])) {
+                    $propertyMetadata[$propertyAnnotation->name]['format'] = $propertyAnnotation->options['format'];
+                }
+
                 // If property is multilanguage
                 if ($propertyAnnotation instanceof MLProperty) {
-                    $propertyMetadata[$propertyAnnotation->name] = array_merge(
-                        $propertyMetadata[$propertyAnnotation->name],
-                        [
-                            'multilanguage' => true,
-                        ]
-                    );
+                    $propertyMetadata[$propertyAnnotation->name]['multilanguage'] = true;
                 }
 
                 // If property is a (nested) object

@@ -84,6 +84,7 @@ class DocumentMetadataCollector
      */
     private function isCacheFresh()
     {
+        return false;
         $documentDirs = $this->documentLocator->getAllDocumentDirs();
 
         foreach ($documentDirs as $dir) {
