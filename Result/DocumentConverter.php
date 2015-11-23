@@ -122,12 +122,6 @@ class DocumentConverter
                     );
                 }
 
-            } elseif ($propertyMetadata['type'] === 'date') {
-                $objectValue = \DateTime::createFromFormat(
-                    isset($propertyMetadata['format']) ? $propertyMetadata['format'] : \DateTime::ISO8601,
-                    $array[$esField]
-                );
-
             } else {
                 $objectValue = $array[$esField];
             }
@@ -189,9 +183,6 @@ class DocumentConverter
                     foreach ($value->getValues() as $language => $langValue) {
                         $array[$name . $this->languageSeparator . $language] = $langValue;
                     }
-
-                } elseif ($value instanceof \DateTime) {
-                    $array[$name] = $value->format(isset($propertyMetadata['format']) ? $propertyMetadata['format'] : \DateTime::ISO8601);
 
                 } else {
                     $array[$name] = $value;

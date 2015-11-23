@@ -191,11 +191,6 @@ class DocumentParser
                     'type' => $propertyAnnotation->type,
                 ];
 
-                // If property is date and a custom format is set
-                if (isset($propertyAnnotation->options['format'])) {
-                    $propertyMetadata[$propertyAnnotation->name]['format'] = $propertyAnnotation->options['format'];
-                }
-
                 // If property is multilanguage
                 if ($propertyAnnotation instanceof MLProperty) {
                     $propertyMetadata[$propertyAnnotation->name]['multilanguage'] = true;
