@@ -45,11 +45,6 @@ final class Document implements DumperInterface
     public $dynamicDateFormats;
 
     /**
-     * @var array
-     */
-    public $timestamp;
-
-    /**
      * {@inheritdoc}
      */
     public function dump(array $options = [])
@@ -57,7 +52,6 @@ final class Document implements DumperInterface
         return [
             '_parent' => $this->parent,
             '_all' => $this->all,
-            '_timestamp' => $this->timestamp,
             'dynamic_templates' => $this->dynamicTemplates,
             'dynamic_date_formats' => $this->dynamicDateFormats,
         ];
