@@ -2,12 +2,11 @@
 
 The Elasticsearch bundle requires document mapping definitions to create the correct index schema and be able to convert data to objects and vice versa - think Doctrine. 
 
-### Document class annotations
+## Document class annotations
 
-Elasticsearch type mappings are defined using annotations within document entity classes:
+Elasticsearch type mappings are defined using annotations within document entity classes that implement DocumentInterface:
 ```php
 <?php
-// 
 namespace AppBundle\Document;
 
 use Sineflow\ElasticsearchBundle\Document\AbstractDocument;
@@ -30,7 +29,9 @@ class Product extends AbstractDocument
 > Make sure your document classes directly implement DocumentInterface or extend AbstractDocument.
 
 
-#### Document annotation configuration
+#### Document annotation
+
+The class representing a document must be annotated as `@ES\Document`. The following properties are supported inside that annotation:
 
 - `type` Specifies the name of the Elasticsearch type this class represents. The parameter is optional and, if not supplied, the bundle will use the lowercased class name as such. 
 
@@ -40,137 +41,59 @@ class Product extends AbstractDocument
 - `parent` Allows you to specify a parent type ([more info here](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-parent-field.html))
 > EXAMPLE: [TODO]
 
-- `all` Allows enabling/disabling of the _all field ([more info here](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-all-field.html)) 
+- `all` Set the _all field ([more info here](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-all-field.html)) 
 > EXAMPLE: `all={"enabled":true}`
 
-- `dynamicTemplates` Set dynamic field templates ([more info here](https://www.elastic.co/guide/en/elasticsearch/reference/current/dynamic-templates.html))
+- `dynamicTemplates` Set dynamic_templates ([more info here](https://www.elastic.co/guide/en/elasticsearch/reference/current/dynamic-templates.html))
 
-- `dynamicDateFormats`
-
-- `timestamp`
-
-##### Abstract document
-``AbstractDocument`` implements ``DocumentInterface`` and gives support with all special fields in the elasticsearch document such as `_id`, `_source`, `_ttl`, `_parent`, `_fields` handling. `AbstractDocument` has all parameters and setters already defined for you.
+- `dynamicDateFormats` Set dynamic_date_formats ([more info here](https://www.elastic.co/guide/en/elasticsearch/reference/current/dynamic-field-mapping.html#date-detection))
 
 
-### Document properties annotations
+### Properties annotations
 
-To define type properties there is `@ES\Property` annotation. You can define different class property name as an elasticsearch type's property name and it will be handled automatically by bundle. Property also supports the type where it needs to define what kind of information will be indexed. Analyzers names is the same that was defined in `config.yml` `analysis` section [before](#Mapping configuration).
+Each field within the document is specified using the `@ES\Property` annotation. The following properties are supported inside that annotation:
 
-To add custom settings to property like analyzer it has to be included in `options`. Here's an example how to add it:
+- `name` Specifies the name of the field (required).
 
-```php
+- `type` Specifies the type of the field in Elasticsearch (required).
 
-<?php
-//AcmeDemoBundle:Content
-use ONGR\ElasticsearchBundle\Annotation as ES;
-use ONGR\ElasticsearchBundle\Document\AbstractContentDocument;
+- `multilanguage` A flag that specifies whether the field will be multilanguage. For more information, see [multilanguage support](i18n.md).
+> EXAMPLE: `multilanguage=true`
 
-/**
- * @ES\Document(type="content")
- */
-class Content extends AbstractContentDocument
-{
-    /**
-     * @ES\Property(
-        type="string",
-        name="title",
-        options={"index_analyzer":"incrementalAnalyzer"}
-      )
-     */
-    public $title;
-}
+- `objectName` When the field type is `object` or `nested`, this property must be specified, as it says which class defines the (nested) object. For more information, see [mapping of nested/inner objects](objects.md).
+> EXAMPLE: `objectName="AppBundle:ObjAlias"`
 
-```
+- `multiple` Relevant only for `object` and `nested` fields. It specifies whether the field contains a single object or multiple ones.
+> EXAMPLE: `multiple=true`
 
-> `options` container accepts any parameters. We leave mapping validation to elasticsearch and elasticsearch-php client, if there will be a mistake index won't be created due exception.
+- `options` An array of literal options, sent to Elasticsearch as they are. The only exception is with multilanguage properties, where further processing is applied. 
+> EXAMPLE: `options={"analyzer":"my_special_analyzer", "null_value":0}`
 
+## Object class annotations
 
-It is a little different to define nested and object types. For this user will need to create a separate class with object annotation. Lets assume we have a Content type with object field.
+Object classes are almost the same as document classes:
 
 ```php
-
 <?php
-//AcmeDemoBundle:Content
-use ONGR\ElasticsearchBundle\Annotation as ES;
-use ONGR\ElasticsearchBundle\Document\AbstractContentDocument;
+namespace AppBundle\Document;
 
-/**
- * @ES\Document(type="content")
- */
-class Content extends AbstractContentDocument
-{
-    /**
-     * @ES\Property(type="string", name="title")
-     */
-    public $title;
-
-    /**
-     * @var ContentMetaObject
-     *
-     * @ES\Property(name="meta", type="object", objectName="AcmeDemoBundle:ContentMetaObject")
-     */
-    public $metaObject;
-}
-
-```
-
-And the content object will look like:
-
-```php
-
-<?php
-//AcmeDemoBundle:ContentMetaObject
-
-use ONGR\ElasticsearchBundle\Annotation as ES;
+use Sineflow\ElasticsearchBundle\Document\ObjectInterface;
+use Sineflow\ElasticsearchBundle\Annotation as ES;
 
 /**
  * @ES\Object
  */
-class ContentMetaObject
+class ObjAlias implements ObjectInterface
 {
     /**
-     * @ES\Property(type="string")
+     * @var string
+     *
+     * @ES\Property(name="title", type="string")
      */
-    public $key;
-
-    /**
-     * @ES\Property(type="string")
-     */
-    public $value;
+    public $title;
 }
-
 ```
 
-##### Multiple objects
-As shown in the example, by default only a single object will be saved in the document. If there is necessary to store a multiple objects (array), add `multiple=true`. While initiating a document with multiple items you can simply set an array or any kind of traversable.
-
-```php
-
-//....
-/**
- * @var ContentMetaObject
- *
- * @ES\Property(name="meta", type="object", multiple="true", objectName="AcmeDemoBundle:ContentMetaObject")
- */
-public $metaObject;
-//....
-
-```
-
-Insert action will look like this:
-```php
-
-<?php
-$content = new Content();
-$content->properties = [new ContentMetaObject(), new ContentMetaObject()];
-
-$manager->persist($content);
-$manager->commit();
-
-```
-To define object or nested fields the same `@ES\Property` annotations could be used. In the objects there is possibility to define other objects also.
-
-> Nested types can be defined the same way as objects, except ``@ES\Nested`` annotation must be used.
+The difference with document classes is that the class must implement `ObjectInterface` and be annotated as `@ES\Object`. The mapping of the object properties follows the same rules as the one for the document properties.
 
 More info about mapping is in the [elasticsearch mapping documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html)
