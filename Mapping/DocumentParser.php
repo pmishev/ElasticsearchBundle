@@ -245,7 +245,6 @@ class DocumentParser
             'Document',
             'Property',
             'Object',
-            'Nested',
         ];
 
         foreach ($annotations as $annotation) {
@@ -381,9 +380,7 @@ class DocumentParser
      */
     private function getRelationMapping(\ReflectionClass $documentReflection, $indexAnalyzers = [])
     {
-        if ($this->reader->getClassAnnotation($documentReflection, 'Sineflow\ElasticsearchBundle\Annotation\Object')
-            || $this->reader->getClassAnnotation($documentReflection, 'Sineflow\ElasticsearchBundle\Annotation\Nested')
-        ) {
+        if ($this->reader->getClassAnnotation($documentReflection, 'Sineflow\ElasticsearchBundle\Annotation\Object')) {
             return ['properties' => $this->getProperties($documentReflection, $indexAnalyzers)];
         }
 
