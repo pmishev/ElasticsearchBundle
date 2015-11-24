@@ -31,13 +31,6 @@ abstract class AbstractDocument implements DocumentInterface
     public $parent;
 
     /**
-     * @var string
-     *
-     * @ES\Property(type="string", name="_ttl")
-     */
-    public $ttl;
-
-    /**
      * When document is cloned id is set to null.
      */
     public function __clone()

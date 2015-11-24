@@ -32,11 +32,6 @@ final class Document implements DumperInterface
     /**
      * @var array
      */
-    public $ttl;
-
-    /**
-     * @var array
-     */
     public $all;
 
     /**
@@ -66,7 +61,6 @@ final class Document implements DumperInterface
     {
         return [
             '_parent' => $this->parent,
-            '_ttl' => $this->ttl,
             '_all' => $this->all,
             '_timestamp' => $this->timestamp,
             'dynamic_templates' => $this->dynamicTemplates,

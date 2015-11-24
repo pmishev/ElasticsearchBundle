@@ -13,6 +13,7 @@ use Sineflow\ElasticsearchBundle\Mapping\DumperInterface;
 final class Property implements DumperInterface
 {
     const LANGUAGE_PLACEHOLDER = '{lang}';
+
     const DEFAULT_LANG_SUFFIX = 'default';
 
     /**
@@ -58,7 +59,10 @@ final class Property implements DumperInterface
     public $options;
 
     /**
-     * {@inheritdoc}
+     * Dumps property fields as array for index mapping
+     *
+     * @param array $settings
+     * @return array
      */
     public function dump(array $settings = [])
     {

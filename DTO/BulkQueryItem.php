@@ -41,11 +41,6 @@ class BulkQueryItem
     private $parent;
 
     /**
-     * @var array
-     */
-    private $ttl;
-
-    /**
      * @param string $operation One of: index, update, delete, create.
      * @param string $index     Elasticsearch index name.
      * @param string $type      Elasticsearch type name.
@@ -61,9 +56,8 @@ class BulkQueryItem
         $this->index = $index;
         $this->type = $type;
         $this->id = isset($query['_id']) ? $query['_id'] : null;
-        $this->ttl = isset($query['_ttl']) ? $query['_ttl'] : null;
         $this->parent = isset($query['_parent']) ? $query['_parent'] : null;
-        unset($query['_id'], $query['_ttl'], $query['_parent']);
+        unset($query['_id'], $query['_parent']);
         $this->query = $query;
     }
 
@@ -91,7 +85,6 @@ class BulkQueryItem
                     '_index' => $forceIndex ?: $this->index,
                     '_type' => $this->type,
                     '_id' => $this->id,
-                    '_ttl' => $this->ttl,
                     '_parent' => $this->parent
                 ]
             ),
