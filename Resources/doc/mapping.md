@@ -36,13 +36,19 @@ The class representing a document must be annotated as `@ES\Document`. The follo
 - `type` Specifies the name of the Elasticsearch type this class represents. The parameter is optional and, if not supplied, the bundle will use the lowercased class name as such. 
 
 - `repositoryClass` Allows you to specify a specific repository class for this document. If not specified, the default repository class is used.
-> EXAMPLE: `repositoryClass="AppBundle\Document\Repository\ProductRepository"`
+```
+repositoryClass="AppBundle\Document\Repository\ProductRepository"
+```
 
 - `parent` Allows you to specify a parent type ([more info here](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-parent-field.html))
-> EXAMPLE: [TODO]
+```
+TODO: add example
+```
 
 - `all` Set the _all field ([more info here](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-all-field.html)) 
-> EXAMPLE: `all={"enabled":true}`
+```
+all={"enabled":true}
+```
 
 - `dynamicTemplates` Set dynamic_templates ([more info here](https://www.elastic.co/guide/en/elasticsearch/reference/current/dynamic-templates.html))
 
@@ -58,16 +64,27 @@ Each field within the document is specified using the `@ES\Property` annotation.
 - `type` Specifies the type of the field in Elasticsearch (required).
 
 - `multilanguage` A flag that specifies whether the field will be multilanguage. For more information, see [multilanguage support](i18n.md).
-> EXAMPLE: `multilanguage=true`
+```
+multilanguage=true
+```
 
 - `objectName` When the field type is `object` or `nested`, this property must be specified, as it says which class defines the (nested) object. For more information, see [mapping of nested/inner objects](objects.md).
-> EXAMPLE: `objectName="AppBundle:ObjAlias"`
+```
+objectName="AppBundle:ObjAlias"
+```
 
 - `multiple` Relevant only for `object` and `nested` fields. It specifies whether the field contains a single object or multiple ones.
-> EXAMPLE: `multiple=true`
+```
+multiple=true
+```
 
 - `options` An array of literal options, sent to Elasticsearch as they are. The only exception is with multilanguage properties, where further processing is applied. 
-> EXAMPLE: `options={"analyzer":"my_special_analyzer", "null_value":0}`
+```
+options={
+        "analyzer":"my_special_analyzer", 
+        "null_value":0
+}
+```
 
 ## Object class annotations
 
