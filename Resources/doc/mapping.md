@@ -36,6 +36,7 @@ The class representing a document must be annotated as `@ES\Document`. The follo
 - `type` Specifies the name of the Elasticsearch type this class represents. The parameter is optional and, if not supplied, the bundle will use the lowercased class name as such. 
 
 - `repositoryClass` Allows you to specify a specific repository class for this document. If not specified, the default repository class is used.
+
 > EXAMPLE: `repositoryClass="AppBundle\Document\Repository\ProductRepository"`
 
 - `parent` Allows you to specify a parent type ([more info here](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-parent-field.html))
