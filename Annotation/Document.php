@@ -42,11 +42,6 @@ final class Document implements DumperInterface
     /**
      * @var array
      */
-    public $transform;
-
-    /**
-     * @var array
-     */
     public $dynamicDateFormats;
 
     /**
@@ -64,7 +59,6 @@ final class Document implements DumperInterface
             '_all' => $this->all,
             '_timestamp' => $this->timestamp,
             'dynamic_templates' => $this->dynamicTemplates,
-            'transform' => $this->transform,
             'dynamic_date_formats' => $this->dynamicDateFormats,
         ];
     }
