@@ -43,7 +43,7 @@ services:
 
     sfes.finder:
         class: %sfes.finder.class%
-        arguments: [@sfes.document_metadata_collector, @sfes.index_manager_registry, @sfes.document_converter, %sfes.mlproperty.language_separator%]
+        arguments: [@sfes.document_metadata_collector, @sfes.index_manager_registry, @sfes.document_converter]
 
     sfes.document_locator:
         class: %sfes.document_locator.class%

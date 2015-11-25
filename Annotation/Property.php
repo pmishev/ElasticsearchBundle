@@ -27,7 +27,6 @@ final class Property implements DumperInterface
      * @var string
      *
      * @Required
-     * @Enum({"string", "boolean", "integer", "float", "date", "object", "nested", "geo_point", "geo_shape", "ip"})
      */
     public $type;
 

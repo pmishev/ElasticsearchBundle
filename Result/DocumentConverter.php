@@ -5,7 +5,6 @@ namespace Sineflow\ElasticsearchBundle\Result;
 use Sineflow\ElasticsearchBundle\Document\DocumentInterface;
 use Sineflow\ElasticsearchBundle\Document\MLProperty;
 use Sineflow\ElasticsearchBundle\Document\ObjectInterface;
-use Sineflow\ElasticsearchBundle\Mapping\ClassMetadata;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
 

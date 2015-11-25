@@ -16,8 +16,7 @@ interface RepositoryInterface
      * @param IndexManager $manager
      * @param string       $documentClass
      * @param Finder       $finder
-     * @param string       $languageSeparator
      */
-    public function __construct($manager, $documentClass, Finder $finder, $languageSeparator);
+    public function __construct($manager, $documentClass, Finder $finder);
 
 }

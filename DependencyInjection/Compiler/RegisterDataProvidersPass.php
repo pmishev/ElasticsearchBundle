@@ -4,7 +4,6 @@ namespace Sineflow\ElasticsearchBundle\DependencyInjection\Compiler;
 
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
-use Symfony\Component\DependencyInjection\Definition;
 
 /**
  * Registers data providers for type entities

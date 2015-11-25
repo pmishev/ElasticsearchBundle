@@ -40,27 +40,19 @@ class Finder
     private $documentConverter;
 
     /**
-     * @var string
-     */
-    private $languageSeparator;
-
-    /**
      * Finder constructor.
      * @param DocumentMetadataCollector $documentMetadataCollector
      * @param IndexManagerRegistry      $indexManagerRegistry
      * @param DocumentConverter         $documentConverter
-     * @param string                    $languageSeparator
      */
     public function __construct(
         DocumentMetadataCollector $documentMetadataCollector,
         IndexManagerRegistry $indexManagerRegistry,
-        DocumentConverter $documentConverter,
-        $languageSeparator)
+        DocumentConverter $documentConverter)
     {
         $this->documentMetadataCollector = $documentMetadataCollector;
         $this->indexManagerRegistry = $indexManagerRegistry;
         $this->documentConverter = $documentConverter;
-        $this->languageSeparator = $languageSeparator;
     }
 
     /**

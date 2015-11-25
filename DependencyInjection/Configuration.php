@@ -2,7 +2,6 @@
 
 namespace Sineflow\ElasticsearchBundle\DependencyInjection;
 
-use Psr\Log\LogLevel;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
@@ -12,16 +11,6 @@ use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
  */
 class Configuration implements ConfigurationInterface
 {
-    private $kernelLogsDir;
-
-    /**
-     * @param string $kernelLogsDir
-     */
-    public function  __construct($kernelLogsDir)
-    {
-        $this->kernelLogsDir = $kernelLogsDir;
-    }
-
     /**
      * {@inheritdoc}
      */

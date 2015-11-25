@@ -4,10 +4,8 @@ namespace Sineflow\ElasticsearchBundle;
 
 use Sineflow\ElasticsearchBundle\DependencyInjection\Compiler\AddConnectionsPass;
 use Sineflow\ElasticsearchBundle\DependencyInjection\Compiler\AddIndexManagersPass;
-use Sineflow\ElasticsearchBundle\DependencyInjection\Compiler\MappingPass;
 use Sineflow\ElasticsearchBundle\DependencyInjection\Compiler\RegisterDataProvidersPass;
 use Sineflow\ElasticsearchBundle\DependencyInjection\Compiler\RegisterLanguageProviderPass;
-use Symfony\Component\ClassLoader\MapClassLoader;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 

@@ -188,7 +188,7 @@ class IndexManager
         }
 
         $repositoryClass = $this->metadataCollector->getDocumentMetadata($documentClass)->getRepositoryClass() ?: Repository::class;
-        $repo = new $repositoryClass($this, $documentClass, $this->finder, $this->languageSeparator);
+        $repo = new $repositoryClass($this, $documentClass, $this->finder);
 
         if (!($repo instanceof RepositoryInterface)) {
             throw new \InvalidArgumentException(sprintf('Repository "%s" must implement "%s"', $repositoryClass, RepositoryInterface::class));

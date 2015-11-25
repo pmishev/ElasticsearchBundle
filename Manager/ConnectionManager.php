@@ -3,7 +3,6 @@
 namespace Sineflow\ElasticsearchBundle\Manager;
 
 use Elasticsearch\Client;
-use Elasticsearch\Common\Exceptions\Forbidden403Exception;
 use Elasticsearch\Common\Exceptions\InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Sineflow\ElasticsearchBundle\DTO\BulkQueryItem;

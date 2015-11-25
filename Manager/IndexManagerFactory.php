@@ -38,11 +38,6 @@ class IndexManagerFactory
     private $languageSeparator;
 
     /**
-     * @var IndexManager[] Array keeping references to the created index managers
-     */
-    private $indexManagers;
-
-    /**
      * @param DocumentMetadataCollector $metadataCollector
      * @param ProviderRegistry          $providerRegistry
      * @param Finder                    $finder
@@ -87,8 +82,6 @@ class IndexManagerFactory
 
         $manager->setUseAliases($indexSettings['use_aliases']);
 
-        $this->indexManagers[$managerName] = $manager;
-
         return $manager;
     }
 
@@ -120,5 +113,4 @@ class IndexManagerFactory
 
         return $index;
     }
-
 }
