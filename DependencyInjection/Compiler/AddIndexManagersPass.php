@@ -22,6 +22,8 @@ class AddIndexManagersPass implements CompilerPassInterface
 
         // Go through each defined index and register a manager service for each
         foreach ($indices as $indexManagerName => $indexSettings) {
+            $indexManagerName = strtolower($indexManagerName);
+
             // Make sure the connection service definition exists
             $connectionService = sprintf('sfes.connection.%s', $indexSettings['connection']);
             if (!$container->hasDefinition($connectionService)) {
@@ -47,7 +49,7 @@ class AddIndexManagersPass implements CompilerPassInterface
             );
 
             $container->setDefinition(
-                sprintf('sfes.index.%s', strtolower($indexManagerName)),
+                sprintf('sfes.index.%s', $indexManagerName),
                 $indexManagerDefinition
             );
         }
