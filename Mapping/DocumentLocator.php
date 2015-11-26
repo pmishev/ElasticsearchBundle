@@ -66,7 +66,8 @@ class DocumentLocator
     }
 
     /**
-     * Resolves document class name from short syntax.
+     * Returns the document class name from short syntax
+     * or the class name as it is, if it is already fully qualified
      *
      * @param string $className Short syntax for class name (e.g AppBundle:Product)
      * @return string Fully qualified class name
@@ -85,6 +86,7 @@ class DocumentLocator
 
     /**
      * Return the short name for a fully qualified document class name
+     * or the name as it is, if it is already a short name
      *
      * @param string $className Fully qualified class name
      * @return string Class name in short notation (e.g. AppBundle:Product)

@@ -76,41 +76,10 @@ class IndexManagerFactory
             $this->providerRegistry,
             $this->finder,
             $this->documentConverter,
-            $this->getIndexParams($managerName, $indexSettings),
+            $indexSettings,
             $this->languageSeparator
         );
 
-        $manager->setUseAliases($indexSettings['use_aliases']);
-
         return $manager;
-    }
-
-    /**
-     * Returns params for index.
-     *
-     * @param string           $indexManagerName
-     * @param array            $indexSettings
-     * @return array
-     */
-    private function getIndexParams($indexManagerName, array $indexSettings)
-    {
-        $index = ['index' => $indexSettings['name']];
-
-        if (!empty($indexSettings['settings'])) {
-            $index['body']['settings'] = $indexSettings['settings'];
-        }
-
-        $mappings = [];
-
-        $metadata = $this->metadataCollector->getDocumentsMetadataForIndex($indexManagerName);
-        foreach ($metadata as $className => $documentMetadata) {
-            $mappings[$documentMetadata->getType()] = $documentMetadata->getClientMapping();
-        }
-
-        if (!empty($mappings)) {
-            $index['body']['mappings'] = $mappings;
-        }
-
-        return $index;
     }
 }

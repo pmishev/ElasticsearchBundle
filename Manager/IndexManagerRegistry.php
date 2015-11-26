@@ -3,7 +3,6 @@
 namespace Sineflow\ElasticsearchBundle\Manager;
 
 use Sineflow\ElasticsearchBundle\Document\DocumentInterface;
-use Sineflow\ElasticsearchBundle\Mapping\DocumentLocator;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
 use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -19,11 +18,6 @@ class IndexManagerRegistry implements ContainerAwareInterface
     private $container;
 
     /**
-     * @var DocumentLocator
-     */
-    private $documentLocator;
-
-    /**
      * @var DocumentMetadataCollector
      */
     private $metadataCollector;
@@ -31,12 +25,10 @@ class IndexManagerRegistry implements ContainerAwareInterface
     /**
      * Constructor
      *
-     * @param DocumentLocator           $documentLocator
      * @param DocumentMetadataCollector $metadataCollector
      */
-    public function __construct(DocumentLocator $documentLocator, DocumentMetadataCollector $metadataCollector)
+    public function __construct(DocumentMetadataCollector $metadataCollector)
     {
-        $this->documentLocator = $documentLocator;
         $this->metadataCollector = $metadataCollector;
     }
 
@@ -74,8 +66,7 @@ class IndexManagerRegistry implements ContainerAwareInterface
      */
     public function getByEntity(DocumentInterface $entity)
     {
-        $documentClass = $this->documentLocator->getShortClassName(get_class($entity));
-        $indexManagerName = $this->metadataCollector->getDocumentClassIndex($documentClass);
+        $indexManagerName = $this->metadataCollector->getDocumentClassIndex(get_class($entity));
 
         return $this->get($indexManagerName);
     }

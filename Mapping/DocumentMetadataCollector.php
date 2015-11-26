@@ -216,11 +216,13 @@ class DocumentMetadataCollector
     /**
      * Returns the index manager name that manages the given entity document class
      *
-     * @param string $documentClass
+     * @param string $documentClass Either as a fully qualified class name or a short notation
      * @return string
      */
     public function getDocumentClassIndex($documentClass)
     {
+        $documentClass = $this->documentLocator->getShortClassName($documentClass);
+
         $indices = $this->getDocumentClassesIndices();
         if (!isset($indices[$documentClass])) {
             throw new \InvalidArgumentException(sprintf('Entity "%s" is not managed by any index manager', $documentClass));

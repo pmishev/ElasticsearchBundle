@@ -49,6 +49,11 @@ class ConnectionManager
     private $logger = null;
 
     /**
+     * @var bool
+     */
+    private $autocommit;
+
+    /**
      * Construct.
      *
      * @param string $connectionName     The unique connection name
@@ -62,6 +67,7 @@ class ConnectionManager
         $this->connectionSettings = $connectionSettings;
         $this->bulkQueries = [];
         $this->bulkParams = [];
+        $this->autocommit = true;
     }
 
     /**
@@ -105,6 +111,27 @@ class ConnectionManager
     }
 
     /**
+     * @return bool
+     */
+    public function isAutocommit()
+    {
+        return $this->autocommit;
+    }
+
+    /**
+     * @param bool $autocommit
+     */
+    public function setAutocommit($autocommit)
+    {
+        // If the autocommit mode is being turned on, commit any pending bulk items
+        if (!$this->autocommit && $autocommit) {
+            $this->commit();
+        }
+
+        $this->autocommit = $autocommit;
+    }
+
+    /**
      * Adds query to bulk queries container.
      *
      * @param string $operation One of: index, update, delete, create.
@@ -142,7 +169,6 @@ class ConnectionManager
      */
     public function commit($forceRefresh = true)
     {
-
         if (empty($this->bulkQueries)) {
             return;
         }

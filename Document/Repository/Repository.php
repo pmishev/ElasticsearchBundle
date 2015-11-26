@@ -6,6 +6,7 @@ use Sineflow\ElasticsearchBundle\Document\DocumentInterface;
 use Sineflow\ElasticsearchBundle\Finder\Finder;
 use Sineflow\ElasticsearchBundle\Manager\IndexManager;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
+use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
 
 /**
  * Repository class.
@@ -39,22 +40,24 @@ class Repository implements RepositoryInterface
     /**
      * Constructor.
      *
-     * @param IndexManager $indexManager
-     * @param string       $documentClass
-     * @param Finder       $finder
+     * @param IndexManager              $indexManager
+     * @param string                    $documentClass
+     * @param Finder                    $finder
+     * @param DocumentMetadataCollector $metadataCollector
      */
-    public function __construct($indexManager, $documentClass, Finder $finder)
+    public function __construct(IndexManager $indexManager, $documentClass, Finder $finder, DocumentMetadataCollector $metadataCollector)
     {
         $this->indexManager = $indexManager;
         $this->documentClass = $documentClass;
         $this->finder = $finder;
+        $this->documentMetadataCollector = $metadataCollector;
 
-        // Get the metadata of the document class managed by the repository
-        $metadata = $this->getManager()->getDocumentsMetadata([$documentClass]);
-        if (empty($metadata)) {
+        if ($this->documentMetadataCollector->getDocumentClassIndex($documentClass) !== $indexManager->getManagerName()) {
             throw new \InvalidArgumentException(sprintf('Type "%s" is not managed by index "%s"', $documentClass, $indexManager->getManagerName()));
         }
-        $this->metadata = $metadata[$documentClass];
+
+        // Get the metadata of the document class managed by the repository
+        $this->metadata = $this->documentMetadataCollector->getDocumentMetadata($documentClass);
     }
 
     /**
@@ -62,7 +65,7 @@ class Repository implements RepositoryInterface
      *
      * @return IndexManager
      */
-    public function getManager()
+    public function getIndexManager()
     {
         return $this->indexManager;
     }
@@ -81,34 +84,48 @@ class Repository implements RepositoryInterface
     }
 
     /**
-     * Removes a single document data by ID.
-     *
-     * @param string $id Document ID to remove.
-     *
-     * @return array
-     *
-     * @throws \LogicException
-     */
-    public function remove($id)
-    {
-        $params = [
-            'index' => $this->getManager()->getWriteAlias(),
-            'type' => $this->metadata->getType(),
-            'id' => $id,
-        ];
-
-        $response = $this->getManager()->getConnection()->getClient()->delete($params);
-
-        return $response;
-    }
-
-    /**
-     * Reindex a single document in the ES index
+     * Rebuilds the data of a document and adds it to a bulk request for the next commit.
+     * Depending on the connection autocommit mode, the change may be committed right away.
      *
      * @param int $id
      */
     public function reindex($id)
     {
         $this->indexManager->reindex($this->documentClass, $id);
+    }
+
+    /**
+     * Adds document removal to a bulk request for the next commit.
+     * Depending on the connection autocommit mode, the removal may be committed right away.
+     *
+     * @param string $id Document ID to remove.
+     *
+     * @return array
+     */
+    public function delete($id)
+    {
+        $this->indexManager->delete($this->documentClass, $id);
+    }
+
+    /**
+     * Adds document to a bulk request for the next commit.
+     * Depending on the connection autocommit mode, the update may be committed right away.
+     *
+     * @param DocumentInterface $document The document entity to index in ES
+     */
+    public function persist(DocumentInterface $document)
+    {
+        $this->indexManager->persist($document);
+    }
+
+    /**
+     * Adds a prepared document array to a bulk request for the next commit.
+     * Depending on the connection autocommit mode, the update may be committed right away.
+     *
+     * @param array $documentArray The document to index in ES
+     */
+    public function persistRaw(array $documentArray)
+    {
+        $this->indexManager->persistRaw($this->documentClass, $documentArray);
     }
 }

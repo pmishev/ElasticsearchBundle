@@ -54,7 +54,7 @@ class IndexManager
     /**
      * @var array
      */
-    private $indexSettings;
+    private $indexMapping;
 
     /**
      * @var RepositoryInterface[]
@@ -77,11 +77,6 @@ class IndexManager
     private $writeAlias = null;
 
     /**
-     * @var string The separator string between property names and language codes for ML properties
-     */
-    private $languageSeparator;
-
-    /**
      * @param string                    $managerName
      * @param ConnectionManager         $connection
      * @param DocumentMetadataCollector $metadataCollector
@@ -89,7 +84,6 @@ class IndexManager
      * @param Finder                    $finder
      * @param DocumentConverter         $documentConverter
      * @param array                     $indexSettings
-     * @param string                    $languageSeparator
      */
     public function __construct(
         $managerName,
@@ -98,8 +92,7 @@ class IndexManager
         ProviderRegistry $providerRegistry,
         Finder $finder,
         DocumentConverter $documentConverter,
-        array $indexSettings,
-        $languageSeparator)
+        array $indexSettings)
     {
         $this->managerName = $managerName;
         $this->connection = $connection;
@@ -107,13 +100,44 @@ class IndexManager
         $this->providerRegistry = $providerRegistry;
         $this->finder = $finder;
         $this->documentConverter = $documentConverter;
-        $this->indexSettings = $indexSettings;
-        $this->languageSeparator = $languageSeparator;
+        $this->useAliases = $indexSettings['use_aliases'];
+        $this->indexMapping = $this->getIndexMapping($managerName, $indexSettings);
 
-        if (true === $this->getUseAliases()) {
-            $this->readAlias = $indexSettings['index'];
-            $this->writeAlias = $indexSettings['index'] . '_write';
+        $this->readAlias = $this->getBaseIndexName();
+        $this->writeAlias = $this->getBaseIndexName();
+
+        if (true === $this->useAliases) {
+            $this->writeAlias .= '_write';
         }
+    }
+
+    /**
+     * Returns mapping array for index
+     *
+     * @param string           $indexManagerName
+     * @param array            $indexSettings
+     * @return array
+     */
+    private function getIndexMapping($indexManagerName, array $indexSettings)
+    {
+        $index = ['index' => $indexSettings['name']];
+
+        if (!empty($indexSettings['settings'])) {
+            $index['body']['settings'] = $indexSettings['settings'];
+        }
+
+        $mappings = [];
+
+        $metadata = $this->metadataCollector->getDocumentsMetadataForIndex($indexManagerName);
+        foreach ($metadata as $className => $documentMetadata) {
+            $mappings[$documentMetadata->getType()] = $documentMetadata->getClientMapping();
+        }
+
+        if (!empty($mappings)) {
+            $index['body']['mappings'] = $mappings;
+        }
+
+        return $index;
     }
 
     /**
@@ -125,14 +149,6 @@ class IndexManager
     }
 
     /**
-     * @param bool $useAliases
-     */
-    public function setUseAliases($useAliases)
-    {
-        $this->useAliases = $useAliases;
-    }
-
-    /**
      * @return bool
      */
     public function getUseAliases()
@@ -141,6 +157,8 @@ class IndexManager
     }
 
     /**
+     * Returns the 'read' alias when using aliases, or the index name, when not
+     *
      * @return string
      */
     public function getReadAlias()
@@ -149,6 +167,8 @@ class IndexManager
     }
 
     /**
+     * Returns the 'write' alias when using aliases, or the index name, when not
+     *
      * @return string
      */
     public function getWriteAlias()
@@ -188,7 +208,7 @@ class IndexManager
         }
 
         $repositoryClass = $this->metadataCollector->getDocumentMetadata($documentClass)->getRepositoryClass() ?: Repository::class;
-        $repo = new $repositoryClass($this, $documentClass, $this->finder);
+        $repo = new $repositoryClass($this, $documentClass, $this->finder, $this->metadataCollector);
 
         if (!($repo instanceof RepositoryInterface)) {
             throw new \InvalidArgumentException(sprintf('Repository "%s" must implement "%s"', $repositoryClass, RepositoryInterface::class));
@@ -219,9 +239,9 @@ class IndexManager
      *
      * @return string
      */
-    public function getBaseIndexName()
+    private function getBaseIndexName()
     {
-        return $this->indexSettings['index'];
+        return $this->indexMapping['index'];
     }
 
     /**
@@ -242,13 +262,41 @@ class IndexManager
     }
 
     /**
+     * Returns the live physical index name, verifying that it exists
+     *
+     * @return string
+     * @throws Exception If live index is not found
+     */
+    public function getLiveIndex()
+    {
+        $indexName = null;
+
+        // Get indices namespace of ES client
+        $indices = $this->getConnection()->getClient()->indices();
+
+        if (true === $this->getUseAliases()) {
+            if ($this->getConnection()->existsAlias(['name' => $this->readAlias])) {
+                $indexName = key($indices->getAlias(['name' => $this->readAlias]));
+            }
+        } else {
+            $indexName = $this->getBaseIndexName();
+        }
+
+        if (!$indexName || !$this->getConnection()->existsIndexOrAlias(['index' => $indexName])) {
+            throw new Exception('Live index not found');
+        }
+
+        return $indexName;
+    }
+
+    /**
      * Creates elasticsearch index and adds aliases to it depending on index settings
      *
      * @throws Exception
      */
     public function createIndex()
     {
-        $settings = $this->indexSettings;
+        $settings = $this->indexMapping;
 
         if (true === $this->getUseAliases()) {
             // Make sure the read and write aliases do not exist already as aliases or physical indices
@@ -309,80 +357,6 @@ class IndexManager
     }
 
     /**
-     * Returns the live physical index name
-     *
-     * @return string
-     * @throws Exception If live index is not found
-     */
-    public function getLiveIndex()
-    {
-        $indexName = null;
-
-        // Get indices namespace of ES client
-        $indices = $this->getConnection()->getClient()->indices();
-
-        if (true === $this->getUseAliases()) {
-            if ($this->getConnection()->existsAlias(['name' => $this->readAlias])) {
-                $indexName = key($indices->getAlias(['name' => $this->readAlias]));
-            }
-        } else {
-            $indexName = $this->getBaseIndexName();
-        }
-
-        if (!$indexName || !$this->getConnection()->existsIndexOrAlias(['index' => $indexName])) {
-            throw new Exception('Live index not found');
-        }
-
-        return $indexName;
-    }
-
-    /**
-     * @param bool|true $exceptionIfRebuilding
-     * @throws NoReadAliasException     When read alias does not exist
-     * @throws IndexRebuildingException When the index is rebuilding, according to the current aliases
-     * @throws Exception                When any other problem with the index or aliases mappings exists
-     */
-    public function verifyIndexAndAliasesState($exceptionIfRebuilding = true)
-    {
-        if (false === $this->getUseAliases()) {
-            // Check that the index exists
-            if (!$this->getConnection()->existsIndexOrAlias(['index' => $this->getBaseIndexName()])) {
-                throw new Exception(sprintf('Index "%s" does not exist', $this->getBaseIndexName()));
-            }
-        } else {
-            $aliases = $this->getConnection()->getAliases();
-
-            // Check that read alias exists
-            if (!isset($aliases[$this->readAlias])) {
-                throw new NoReadAliasException(sprintf('Read alias "%s" does not exist', $this->readAlias));
-            }
-            $liveIndex = key($aliases[$this->readAlias]);
-
-            // Check that read alias points to exactly 1 index
-            if (count($aliases[$this->readAlias]) > 1) {
-                throw new Exception(sprintf('Read alias "%s" points to more than one index (%s)', $this->readAlias, implode(', ', $aliases[$this->readAlias])));
-            }
-
-            // Check that write alias exists
-            if (!isset($aliases[$this->writeAlias])) {
-                throw new Exception(sprintf('Write alias "%s" does not exist', $this->writeAlias));
-            }
-
-            // Check that write alias points to the same index as the read alias
-            if (!isset($aliases[$this->writeAlias][$liveIndex])) {
-                throw new Exception(sprintf('Write alias "%s" does not point to the live index "%s"', $this->writeAlias, $liveIndex));
-            }
-
-            // Check if write alias points to more than one index
-            if ($exceptionIfRebuilding && count($aliases[$this->writeAlias]) > 1) {
-                $writeAliasIndices = $aliases[$this->writeAlias];
-                unset($writeAliasIndices[$liveIndex]);
-                throw new IndexRebuildingException(sprintf('Index is currently being rebuilt as "%s"', implode(', ', array_keys($writeAliasIndices))));
-            }
-        }
-    }
-
-    /**
      * Rebuilds ES Index and deletes the old one,
      *
      * @param bool $deleteOld If set, the old index will be deleted upon successful rebuilding
@@ -408,7 +382,7 @@ class IndexManager
             }
 
             // Create a new index
-            $settings = $this->indexSettings;
+            $settings = $this->indexMapping;
             $oldIndex = $this->getLiveIndex();
             $newIndex = $this->getUniqueIndexName();
             $settings['index'] = $newIndex;
@@ -437,13 +411,16 @@ class IndexManager
             $indexDocumentsMetadata = $this->metadataCollector->getDocumentsMetadataForIndex($this->managerName);
             $documentClasses = array_keys($indexDocumentsMetadata);
 
+            // Make sure we don't autocommit on every item in the bulk request
+            $autocommit = $this->getConnection()->isAutocommit();
+            $this->getConnection()->setAutocommit(false);
+
             foreach ($documentClasses as $documentClass) {
                 $typeDataProvider = $this->getDataProvider($documentClass);
                 $i = 1;
                 foreach ($typeDataProvider->getDocuments() as $document) {
                     if (is_array($document)) {
-                        $documentMetadata = $indexDocumentsMetadata[$documentClass];
-                        $this->persistRaw($documentMetadata->getType(), $document);
+                        $this->persistRaw($documentClass, $document);
                     } else {
                         $this->persist($document);
                     }
@@ -456,6 +433,9 @@ class IndexManager
             }
             // Save any remaining documents to ES
             $this->commit();
+
+            // Recover the autocommit mode as it was
+            $this->getConnection()->setAutocommit($autocommit);
 
             // Restore write alias name
             $this->setWriteAlias($originalWriteAlias);
@@ -511,7 +491,56 @@ class IndexManager
     }
 
     /**
-     * Reindex a single document in the ES index
+     * Makes sure the index exists in Elasticsearch and its aliases (if using such) are properly set up
+     *
+     * @param bool|true $exceptionIfRebuilding
+     * @throws NoReadAliasException     When read alias does not exist
+     * @throws IndexRebuildingException When the index is rebuilding, according to the current aliases
+     * @throws Exception                When any other problem with the index or aliases mappings exists
+     */
+    public function verifyIndexAndAliasesState($exceptionIfRebuilding = true)
+    {
+        if (false === $this->getUseAliases()) {
+            // Check that the index exists
+            if (!$this->getConnection()->existsIndexOrAlias(['index' => $this->getBaseIndexName()])) {
+                throw new Exception(sprintf('Index "%s" does not exist', $this->getBaseIndexName()));
+            }
+        } else {
+            $aliases = $this->getConnection()->getAliases();
+
+            // Check that read alias exists
+            if (!isset($aliases[$this->readAlias])) {
+                throw new NoReadAliasException(sprintf('Read alias "%s" does not exist', $this->readAlias));
+            }
+            $liveIndex = key($aliases[$this->readAlias]);
+
+            // Check that read alias points to exactly 1 index
+            if (count($aliases[$this->readAlias]) > 1) {
+                throw new Exception(sprintf('Read alias "%s" points to more than one index (%s)', $this->readAlias, implode(', ', $aliases[$this->readAlias])));
+            }
+
+            // Check that write alias exists
+            if (!isset($aliases[$this->writeAlias])) {
+                throw new Exception(sprintf('Write alias "%s" does not exist', $this->writeAlias));
+            }
+
+            // Check that write alias points to the same index as the read alias
+            if (!isset($aliases[$this->writeAlias][$liveIndex])) {
+                throw new Exception(sprintf('Write alias "%s" does not point to the live index "%s"', $this->writeAlias, $liveIndex));
+            }
+
+            // Check if write alias points to more than one index
+            if ($exceptionIfRebuilding && count($aliases[$this->writeAlias]) > 1) {
+                $writeAliasIndices = $aliases[$this->writeAlias];
+                unset($writeAliasIndices[$liveIndex]);
+                throw new IndexRebuildingException(sprintf('Index is currently being rebuilt as "%s"', implode(', ', array_keys($writeAliasIndices))));
+            }
+        }
+    }
+
+    /**
+     * Rebuilds the data of a document and adds it to a bulk request for the next commit.
+     * Depending on the connection autocommit mode, the change may be committed right away.
      *
      * @param string $documentClass The document class in short notation (i.e. AppBundle:Product)
      * @param int    $id
@@ -538,42 +567,76 @@ class IndexManager
                 if ($document['_id'] !== $id) {
                     throw new \RuntimeException(sprintf('The document id must be "%s", but "%s" was returned from data provider', $id, $document['_id']));
                 }
-                $this->persistRaw($documentMetadata->getType(), $document);
+                $this->persistRaw($documentClass, $document);
                 break;
 
             default:
                 throw new \RuntimeException('Document must be either a DocumentInterface instance or an array with raw data');
         }
 
-        $this->commit();
+        if ($this->getConnection()->isAutocommit()) {
+            $this->commit();
+        }
     }
 
     /**
-     * Adds document to a bulk request for the next flush.
+     * Adds document removal to a bulk request for the next commit.
+     * Depending on the connection autocommit mode, the removal may be committed right away.
+     *
+     * @param string $documentClass The document class in short notation (i.e. AppBundle:Product)
+     * @param string $id            Document ID to remove.
+     *
+     * @return array
+     */
+    public function delete($documentClass, $id)
+    {
+        $documentMetadata = $this->metadataCollector->getDocumentMetadata($documentClass);
+
+        $this->getConnection()->addBulkOperation(
+            'delete',
+            $this->writeAlias,
+            $documentMetadata->getType(),
+            ['_id' => $id]
+        );
+
+        if ($this->getConnection()->isAutocommit()) {
+            $this->commit();
+        }
+    }
+
+    /**
+     * Adds document to a bulk request for the next commit.
+     * Depending on the connection autocommit mode, the update may be committed right away.
      *
      * @param DocumentInterface $document The document entity to index in ES
      */
     public function persist(DocumentInterface $document)
     {
-        $documentMetadata = $this->metadataCollector->getDocumentMetadata(get_class($document));
         $documentArray = $this->documentConverter->convertToArray($document);
-        $this->persistRaw($documentMetadata->getType(), $documentArray);
+        $this->persistRaw(get_class($document), $documentArray);
     }
 
     /**
-     * Adds a prepared document array to a bulk request for the next flush.
+     * Adds a prepared document array to a bulk request for the next commit.
+     * Depending on the connection autocommit mode, the update may be committed right away.
      *
-     * @param string $type          Elasticsearch type name
+     * @param string $documentClass The document class in short notation (i.e. AppBundle:Product)
      * @param array  $documentArray The document to index in ES
      */
-    public function persistRaw($type, array $documentArray)
+    public function persistRaw($documentClass, array $documentArray)
     {
+        $documentMetadata = $this->metadataCollector->getDocumentMetadata($documentClass);
+
         $this->getConnection()->addBulkOperation(
             'index',
             $this->writeAlias,
-            $type,
+            $documentMetadata->getType(),
             $documentArray
         );
+
+        if ($this->getConnection()->isAutocommit()) {
+            $this->commit();
+        }
     }
 
     /**
@@ -584,21 +647,4 @@ class IndexManager
         $this->getConnection()->commit();
     }
 
-    /**
-     * Return the metadata for documents for this index,
-     * optionally filtered by specific document classes in short notation (e.g. AppBundle:Product)
-     *
-     * @param array $documentClasses If given, only metadata for those classes will be returned
-     * @return DocumentMetadata[]
-     */
-    public function getDocumentsMetadata(array $documentClasses = [])
-    {
-        $metadata = $this->metadataCollector->getDocumentsMetadataForIndex($this->managerName);
-
-        if (!empty($documentClasses)) {
-            return array_intersect_key($metadata, array_flip($documentClasses));
-        }
-
-        return $metadata;
-    }
 }
