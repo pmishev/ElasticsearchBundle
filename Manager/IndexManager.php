@@ -12,7 +12,6 @@ use Sineflow\ElasticsearchBundle\Exception\Exception;
 use Sineflow\ElasticsearchBundle\Exception\IndexRebuildingException;
 use Sineflow\ElasticsearchBundle\Exception\NoReadAliasException;
 use Sineflow\ElasticsearchBundle\Finder\Finder;
-use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
 use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
 use Sineflow\ElasticsearchBundle\Result\DocumentConverter;
 
