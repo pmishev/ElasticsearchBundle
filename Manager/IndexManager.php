@@ -6,7 +6,6 @@ use Sineflow\ElasticsearchBundle\Document\DocumentInterface;
 use Sineflow\ElasticsearchBundle\Document\Provider\ProviderInterface;
 use Sineflow\ElasticsearchBundle\Document\Provider\ProviderRegistry;
 use Sineflow\ElasticsearchBundle\Document\Repository\Repository;
-use Sineflow\ElasticsearchBundle\Document\Repository\RepositoryInterface;
 use Sineflow\ElasticsearchBundle\Exception\BulkRequestException;
 use Sineflow\ElasticsearchBundle\Exception\Exception;
 use Sineflow\ElasticsearchBundle\Exception\IndexRebuildingException;
@@ -209,8 +208,8 @@ class IndexManager
         $repositoryClass = $this->metadataCollector->getDocumentMetadata($documentClass)->getRepositoryClass() ?: Repository::class;
         $repo = new $repositoryClass($this, $documentClass, $this->finder, $this->metadataCollector);
 
-        if (!($repo instanceof RepositoryInterface)) {
-            throw new \InvalidArgumentException(sprintf('Repository "%s" must implement "%s"', $repositoryClass, RepositoryInterface::class));
+        if (!($repo instanceof Repository)) {
+            throw new \InvalidArgumentException(sprintf('Repository "%s" must extend "%s"', $repositoryClass, Repository::class));
         }
         $this->repositories[$documentClass] = $repo;
 
@@ -636,14 +635,6 @@ class IndexManager
         if ($this->getConnection()->isAutocommit()) {
             $this->commit();
         }
-    }
-
-    /**
-     * Commits bulk batch to elasticsearch index.
-     */
-    public function commit()
-    {
-        $this->getConnection()->commit();
     }
 
 }

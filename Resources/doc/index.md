@@ -9,7 +9,7 @@ The ElasticsearchBundle uses the [official PHP client for Elasticsearch](https:/
 * [Mapping explained](mapping.md)
 * [Configuration](configuration.md)
 * *[Console commands](commands.md)
-* *[How to do a simple CRUD actions](crud.md)
+* [How to do a simple CRUD actions](crud.md)
 * *[Quick find functions](find_functions.md)
 * *[How to search the index](search.md)
 * *[Scan through the index](scan.md)

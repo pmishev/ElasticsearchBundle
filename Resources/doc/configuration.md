@@ -14,7 +14,7 @@ sineflow_elasticsearch:
                 - user:pass@127.0.0.1:9200
             profiling: true
             logging: true
-            bulk_batch_size: 1000 # The maximum number of requests to send at once, when doing bulk updates
+            bulk_batch_size: 1000
 
     indices:
         @base:
