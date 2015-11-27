@@ -55,7 +55,7 @@ all={"enabled":true}
 - `dynamicDateFormats` Set dynamic_date_formats ([more info here](https://www.elastic.co/guide/en/elasticsearch/reference/current/dynamic-field-mapping.html#date-detection))
 
 
-### Properties annotations
+### Property annotation
 
 Each field within the document is specified using the `@ES\Property` annotation. The following properties are supported inside that annotation:
 
@@ -63,12 +63,12 @@ Each field within the document is specified using the `@ES\Property` annotation.
 
 - `type` Specifies the type of the field in Elasticsearch (required).
 
-- `multilanguage` A flag that specifies whether the field will be multilanguage. For more information, see [multilanguage support](i18n.md).
+- `multilanguage` A flag that specifies whether the field will be multilanguage. For more information, see [declaring multilanguage properties](#mlproperties).
 ```
 multilanguage=true
 ```
 
-- `objectName` When the field type is `object` or `nested`, this property must be specified, as it says which class defines the (nested) object. For more information, see [mapping of nested/inner objects](objects.md).
+- `objectName` When the field type is `object` or `nested`, this property must be specified, as it specifies which class defines the (nested) object.
 ```
 objectName="AppBundle:ObjAlias"
 ```
@@ -81,12 +81,33 @@ multiple=true
 - `options` An array of literal options, sent to Elasticsearch as they are. The only exception is with multilanguage properties, where further processing is applied. 
 ```
 options={
-        "analyzer":"my_special_analyzer", 
-        "null_value":0
+    "analyzer":"my_special_analyzer", 
+    "null_value":0
 }
 ```
 
-## Object class annotations
+### <a name=mlproperties></a>Multilanguage properties
+
+Sometimes, you may have a field that is available in more than one language. This is declared like this:
+
+```
+    /**
+     * @ES\Property(
+     *  name="name",
+     *  type="string",
+     *  multilanguage=true,
+     *  options={
+     *      "analyzer":"{lang}_analyzer",
+     *  }
+     * )
+     */
+    public $name;
+```
+> Note the use of `{lang}` placeholder in the options.
+
+When you have a property definition like that, there will not be a field `name` in your index, but instead there will be `name-en`, `name-fr`, `name-de`, etc. where the suffixes are taken from the available languages in your application. You may also use the special `{lang}` placeholder in the options array, as often you would need to specify different analyzers, depending on the language. For more information on how that works, see [multilanguage support](i18n.md).
+
+## Object class annotation
 
 Object classes are almost the same as document classes:
 
@@ -112,5 +133,6 @@ class ObjAlias implements ObjectInterface
 ```
 
 The difference with document classes is that the class must implement `ObjectInterface` and be annotated as `@ES\Object`. The mapping of the object properties follows the same rules as the one for the document properties.
+
 
 More info about mapping is in the [elasticsearch mapping documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html)
