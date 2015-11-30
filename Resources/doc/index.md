@@ -15,5 +15,8 @@ The ElasticsearchBundle uses the [official PHP client for Elasticsearch](https:/
 * [Working with results](results.md)
 * [Multilanguage support](i18n.md)
 
+#### More details
+* [Classes diagram](classes.md)
+
 #### NOTICE
 The bundle was originally a fork of the excellent [bundle by ONGR.io](https://github.com/ongr-io/ElasticsearchBundle), however I had a bit different vision about certain things and some additional requirements. Eventually, the codebase was largely refactored to become a separate project, but still sharing a lot of similarities with the original. 
