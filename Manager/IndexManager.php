@@ -424,13 +424,13 @@ class IndexManager
                     }
                     // Send the bulk request every X documents, so it doesn't get too big
                     if ($i % $batchSize == 0) {
-                        $this->commit();
+                        $this->getConnection()->commit();
                     }
                     $i++;
                 }
             }
             // Save any remaining documents to ES
-            $this->commit();
+            $this->getConnection()->commit();
 
             // Recover the autocommit mode as it was
             $this->getConnection()->setAutocommit($autocommit);
@@ -573,7 +573,7 @@ class IndexManager
         }
 
         if ($this->getConnection()->isAutocommit()) {
-            $this->commit();
+            $this->getConnection()->commit();
         }
     }
 
@@ -598,7 +598,7 @@ class IndexManager
         );
 
         if ($this->getConnection()->isAutocommit()) {
-            $this->commit();
+            $this->getConnection()->commit();
         }
     }
 
@@ -633,7 +633,7 @@ class IndexManager
         );
 
         if ($this->getConnection()->isAutocommit()) {
-            $this->commit();
+            $this->getConnection()->commit();
         }
     }
 

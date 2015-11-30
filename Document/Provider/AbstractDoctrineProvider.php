@@ -38,13 +38,12 @@ abstract class AbstractDoctrineProvider extends AbstractProvider
     protected $sourceDataHydration = AbstractQuery::HYDRATE_OBJECT;
 
     /**
-     * @param string                    $documentClass     The type the provider is for
-     * @param DocumentMetadataCollector $metadataCollector The metadata collector
-     * @param EntityManager             $em                The Doctrine entity manager
+     * @param string        $documentClass The type the provider is for
+     * @param EntityManager $em            The Doctrine entity manager
      */
-    public function __construct($documentClass, DocumentMetadataCollector $metadataCollector, EntityManager $em)
+    public function __construct($documentClass, EntityManager $em)
     {
-        parent::__construct($documentClass, $metadataCollector);
+        parent::__construct($documentClass);
         $this->em = $em;
     }
 
@@ -64,6 +63,8 @@ abstract class AbstractDoctrineProvider extends AbstractProvider
     abstract public function getQuery();
 
     /**
+     * Converts a Doctrine entity to Elasticsearch entity
+     *
      * @param mixed $entity A doctrine entity object or data array
      * @return mixed An ES document entity object or document array
      */

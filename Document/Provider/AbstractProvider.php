@@ -2,18 +2,11 @@
 
 namespace Sineflow\ElasticsearchBundle\Document\Provider;
 
-use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
-use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
-
 /**
  * Base document provider
  */
 abstract class AbstractProvider implements ProviderInterface
 {
-    /**
-     * @var DocumentMetadataCollector
-     */
-    protected $metadataCollector;
 
     /**
      * @var string The type the provider is for
@@ -21,12 +14,10 @@ abstract class AbstractProvider implements ProviderInterface
     private $documentClass;
 
     /**
-     * @param string                    $documentClass     The type the provider is for
-     * @param DocumentMetadataCollector $metadataCollector The metadata collector
+     * @param string $documentClass The type the provider is for
      */
-    public function __construct($documentClass, DocumentMetadataCollector $metadataCollector)
+    public function __construct($documentClass)
     {
-        $this->metadataCollector = $metadataCollector;
         $this->documentClass = $documentClass;
     }
 
@@ -36,14 +27,6 @@ abstract class AbstractProvider implements ProviderInterface
     protected function getDocumentClass()
     {
         return $this->documentClass;
-    }
-
-    /**
-     * @return DocumentMetadata The metadata for the ES type the provider is for
-     */
-    protected function getDocumentMetadata()
-    {
-        return $this->metadataCollector->getDocumentMetadata($this->documentClass);
     }
 
     /**

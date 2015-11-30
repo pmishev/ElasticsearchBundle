@@ -67,7 +67,7 @@ class ConnectionManager
         $this->connectionSettings = $connectionSettings;
         $this->bulkQueries = [];
         $this->bulkParams = [];
-        $this->autocommit = true;
+        $this->autocommit = false;
     }
 
     /**

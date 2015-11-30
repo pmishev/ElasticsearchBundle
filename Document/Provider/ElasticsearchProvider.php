@@ -11,6 +11,11 @@ use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
 class ElasticsearchProvider extends AbstractProvider
 {
     /**
+     * @var DocumentMetadataCollector
+     */
+    protected $metadataCollector;
+
+    /**
      * @var The index manager of the data source
      */
     protected $sourceIndexManager;
@@ -38,8 +43,9 @@ class ElasticsearchProvider extends AbstractProvider
      */
     public function __construct($documentClass, DocumentMetadataCollector $metadataCollector, IndexManager $sourceIndexManager, $sourceDocumentClass)
     {
-        parent::__construct($documentClass, $metadataCollector);
+        parent::__construct($documentClass);
         $this->sourceIndexManager = $sourceIndexManager;
+        $this->metadataCollector = $metadataCollector;
         $this->sourceDocumentClass = $sourceDocumentClass;
     }
 

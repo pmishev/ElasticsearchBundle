@@ -60,6 +60,7 @@ $product = new Product();
 $product->id = 5; // If not set, elasticsearch will set a random unique id.
 $product->title = 'Acme title';
 $repo->persist($product);
+$repo->getIndexManager()->getConnection()->commit();
 ```
 
 or
@@ -70,6 +71,7 @@ $product = [
     'title' => 'Acme title'
 ];
 $repo->persistRaw($product);
+$im->getConnection()->commit();
 ```
 
 > **id** is a special field that comes from `AbstractDocument` and translates to **\_id** in Elasticsearch, just like **parent**, which translates to **\_parent**.
@@ -80,12 +82,14 @@ $repo->persistRaw($product);
 $product = $repo->getById(5);
 $product->title = 'changed Acme title';
 $repo->persist($product);
+$im->getConnection()->commit();
 ```
 
 ## Delete a document
 
 ```php
 $repo->delete(5);
+$im->getConnection()->commit();
 ```
 
 ## Reindex a document
@@ -93,19 +97,18 @@ $repo->delete(5);
 You can refresh the content of a document from its registered data provider.
 ```php
 $repo->reindex(5);
+$im->getConnection()->commit();
 ```
 For more information about that, see [data providers](dataproviders.md).
 
 ## Bulk operations
 
-It is important to note that all of the above examples for create, update, delete or reindex will only work, if the connection's autocommit mode is **on**, as it is by default.
+It is important to note that you have to explicitly call `commit()` of the connection, after create, update, delete or reindex operations. This allows you to do multiple operations as a single bulk request, which in certain situation greatly increases performance by reducing network round trips. 
+This behaviour can be changed though, by turning **on** the autocommit mode of the connection.
 
-Sometimes, however, you may want to execute several operations at once to reduce round trips to the Elasticsearch cluster. In that case you may turn off the autocommit mode:
 ```php
-$im->getConnection()->setAutocommit(false);
+$im->getConnection()->setAutocommit(true);
 ```
-When you do that, all of the above operations will just add an item to a bulk request, which you must then execute manually like that:
-```php
-$im->getConnection()->commit();
-```
-> Note that turning on the autocommit mode of the connection will also commit any pending operations.
+When you do that, all of the above operations will not need to be explicitly committed and will be executed right away.
+
+> Note that turning on the autocommit mode of the connection when it was off, will commit any pending operations.
