@@ -101,7 +101,7 @@ class DocumentMetadataCollector
      */
     private function fetchDocumentsMetadata()
     {
-
+        $this->metadata = [];
         $documentClasses = [];
 
         foreach ($this->indexManagers as $indexManagerName => $indexSettings) {
