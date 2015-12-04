@@ -57,6 +57,14 @@ class KnpPaginatorAdapter
     }
 
     /**
+     * @return int
+     */
+    public function getResultsType()
+    {
+        return $this->resultsType;
+    }
+
+    /**
      * Return results for this page only
      *
      * @param int    $offset

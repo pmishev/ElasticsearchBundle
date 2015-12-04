@@ -3,6 +3,8 @@
 namespace Sineflow\ElasticsearchBundle\Subscriber;
 
 use Knp\Component\Pager\Event\ItemsEvent;
+use Sineflow\ElasticsearchBundle\Exception\Exception;
+use Sineflow\ElasticsearchBundle\Finder\Finder;
 use Sineflow\ElasticsearchBundle\Paginator\KnpPaginatorAdapter;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -36,7 +38,25 @@ class KnpPaginateQuerySubscriber implements EventSubscriberInterface
             /** @var $results PartialResultsInterface */
             $results = $event->target->getResults($event->getOffset(), $event->getLimit(), $sortField, $sortDirection);
             $event->count = $event->target->getTotalHits();
-            $event->items = $results;
+
+            $resultsType = $event->target->getResultsType();
+            switch ($resultsType) {
+                case Finder::RESULTS_OBJECT:
+                    $event->items = iterator_to_array($results);
+                    break;
+
+                case Finder::RESULTS_ARRAY:
+                    $event->items = $results;
+                    break;
+
+                case Finder::RESULTS_RAW:
+                    $event->items = $results['hits']['hits'];
+                    break;
+
+                default:
+                    throw new Exception(sprintf('Unsupported results type "%s" for KNP paginator', $resultsType));
+            }
+
             $event->stopPropagation();
         }
     }
