@@ -27,6 +27,12 @@ class IndexBuildCommand extends AbstractManagerAwareCommand
                 null,
                 InputOption::VALUE_NONE,
                 'If set, the old index will be deleted upon successful rebuilding'
+            )
+            ->addOption(
+                'cancel-current',
+                null,
+                InputOption::VALUE_NONE,
+                'If set, any indices the write alias points to (except the live one) will be deleted'
             );
     }
 
@@ -39,15 +45,11 @@ class IndexBuildCommand extends AbstractManagerAwareCommand
         /** @var IndexManager $indexManager */
         $indexManager = $this->getManager($indexManagerName);
 
-        if ($input->getOption('delete-old')) {
-            $deleteOldIndex = true;
-        } else {
-            $deleteOldIndex = false;
-        }
-
+        $deleteOldIndex = (bool) $input->getOption('delete-old');
+        $cancelCurrent = (bool) $input->getOption('cancel-current');
 
         try {
-            $indexManager->rebuildIndex($deleteOldIndex);
+            $indexManager->rebuildIndex($deleteOldIndex, $cancelCurrent);
             $output->writeln(
                 sprintf(
                     '<info>Built index for "</info><comment>%s</comment><info>"</info>',

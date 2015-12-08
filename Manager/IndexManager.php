@@ -357,10 +357,11 @@ class IndexManager
     /**
      * Rebuilds ES Index and deletes the old one,
      *
-     * @param bool $deleteOld If set, the old index will be deleted upon successful rebuilding
-     * @throws Exception
+     * @param bool $deleteOld             If set, the old index will be deleted upon successful rebuilding
+     * @param bool $cancelExistingRebuild If set, any indices that the write alias points to (except the live one)
+     *                                    will be deleted before the new build starts
      */
-    public function rebuildIndex($deleteOld = false)
+    public function rebuildIndex($deleteOld = false, $cancelExistingRebuild = false)
     {
         $batchSize = $this->connection->getConnectionSettings()['bulk_batch_size'];
 
@@ -377,6 +378,16 @@ class IndexManager
                 $this->createIndex();
                 // Now again make sure that everything is setup correctly
                 $this->verifyIndexAndAliasesState();
+            } catch (IndexRebuildingException $e) {
+                if ($cancelExistingRebuild) {
+                    // Delete the partial indices currently being rebuilt
+                    foreach ($e->getIndices() as $partialIndex) {
+                        $this->getConnection()->getClient()->indices()->delete(['index' => $partialIndex]);
+                    }
+                } else {
+                    // Rethrow exception
+                    throw $e;
+                }
             }
 
             // Create a new index
@@ -531,7 +542,10 @@ class IndexManager
             if ($exceptionIfRebuilding && count($aliases[$this->writeAlias]) > 1) {
                 $writeAliasIndices = $aliases[$this->writeAlias];
                 unset($writeAliasIndices[$liveIndex]);
-                throw new IndexRebuildingException(sprintf('Index is currently being rebuilt as "%s"', implode(', ', array_keys($writeAliasIndices))));
+                throw new IndexRebuildingException(
+                    array_keys($writeAliasIndices),
+                    sprintf('Index is currently being rebuilt as "%s"', implode(', ', array_keys($writeAliasIndices)))
+                );
             }
         }
     }
