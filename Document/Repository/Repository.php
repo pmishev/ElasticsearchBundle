@@ -35,7 +35,7 @@ class Repository
      *
      * @var DocumentMetadata
      */
-    private $metadata;
+    protected $metadata;
 
     /**
      * Constructor.
