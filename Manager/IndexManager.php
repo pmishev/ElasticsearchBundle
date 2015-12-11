@@ -617,6 +617,41 @@ class IndexManager
     }
 
     /**
+     * Partial document update.
+     *
+     * @param string $documentClass The document class in short notation (i.e. AppBundle:Product)
+     * @param string $id            Document id to update.
+     * @param array  $fields        Fields array to update.
+     * @param string $script        Groovy script to update fields.
+     * @param array  $params        Additional parameters to pass to the client.
+     */
+    public function update($documentClass, $id, array $fields = [], $script = null, array $params = [])
+    {
+        $documentMetadata = $this->metadataCollector->getDocumentMetadata($documentClass);
+
+        $query = array_filter(array_merge(
+            [
+                '_id' => $id,
+                'doc' => $fields,
+                'script' => $script,
+            ],
+            $params
+        ));
+
+        $this->getConnection()->addBulkOperation(
+            'update',
+            $this->writeAlias,
+            $documentMetadata->getType(),
+            $query
+        );
+
+        if ($this->getConnection()->isAutocommit()) {
+            $this->getConnection()->commit();
+        }
+    }
+
+
+    /**
      * Adds document to a bulk request for the next commit.
      * Depending on the connection autocommit mode, the update may be committed right away.
      *

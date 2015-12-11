@@ -44,7 +44,7 @@ class BulkQueryItem
      * @param string $operation One of: index, update, delete, create.
      * @param string $index     Elasticsearch index name.
      * @param string $type      Elasticsearch type name.
-     * @param array  $query     DSL to execute.
+     * @param array  $query     Bulk item data/params.
      */
     public function __construct($operation, $index, $type, array $query)
     {
@@ -93,10 +93,8 @@ class BulkQueryItem
         switch ($this->operation) {
             case 'index':
             case 'create':
-                $result[] = $this->query;
-                break;
             case 'update':
-                $result[] = ['doc' => $this->query];
+                $result[] = $this->query;
                 break;
             case 'delete':
                 // Body for delete operation is not needed to apply.

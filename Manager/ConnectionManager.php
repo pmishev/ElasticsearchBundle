@@ -137,7 +137,7 @@ class ConnectionManager
      * @param string $operation One of: index, update, delete, create.
      * @param string $index     Elasticsearch index name.
      * @param string $type      Elasticsearch type name.
-     * @param array  $query     DSL to execute.
+     * @param array  $query     Bulk item data/params.
      *
      * @throws InvalidArgumentException
      */
