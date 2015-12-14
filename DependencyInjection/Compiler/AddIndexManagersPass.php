@@ -35,6 +35,7 @@ class AddIndexManagersPass implements CompilerPassInterface
             $indexManagerDefinition = new Definition(
                 $container->getParameter('sfes.index_manager.class'),
                 [
+                    $container->getParameter('sfes.index_manager.class'),
                     $indexManagerName,
                     $container->getDefinition($connectionService),
                     $indexSettings

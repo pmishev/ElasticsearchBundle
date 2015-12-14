@@ -59,17 +59,19 @@ class IndexManagerFactory
     }
 
     /**
+     * @param string            $managerClass
      * @param string            $managerName
      * @param ConnectionManager $connection
      * @param array             $indexSettings
      * @return IndexManager
      */
     public function createManager(
+        $managerClass,
         $managerName,
         ConnectionManager $connection,
         array $indexSettings)
     {
-        $manager = new IndexManager(
+        $manager = new $managerClass(
             $managerName,
             $connection,
             $this->metadataCollector,
