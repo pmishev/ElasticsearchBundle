@@ -617,11 +617,11 @@ class IndexManager
     }
 
     /**
-     * Partial document update.
+     * Adds a document update to a bulk request for the next commit.
      *
      * @param string $documentClass The document class in short notation (i.e. AppBundle:Product)
      * @param string $id            Document id to update.
-     * @param array  $fields        Fields array to update.
+     * @param array  $fields        Fields array to update (ignored if script is specified).
      * @param string $script        Groovy script to update fields.
      * @param array  $params        Additional parameters to pass to the client.
      */

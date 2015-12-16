@@ -39,11 +39,6 @@ class ConnectionManager
     private $bulkParams;
 
     /**
-     * @var array Cache of alias/index names and their corresponding indices
-     */
-    private $cachedAliasIndices = [];
-
-    /**
      * @var LoggerInterface
      */
     private $logger = null;
@@ -175,13 +170,14 @@ class ConnectionManager
 
         // Go through each bulk query item
         $bulkRequest = [];
+        $cachedAliasIndices = [];
         foreach ($this->bulkQueries as $bulkQueryItem) {
             // Check whether the target index is actually an alias pointing to more than one index
-            if (isset($this->cachedAliasIndices[$bulkQueryItem->getIndex()])) {
-                $indices = $this->cachedAliasIndices[$bulkQueryItem->getIndex()];
+            if (isset($cachedAliasIndices[$bulkQueryItem->getIndex()])) {
+                $indices = $cachedAliasIndices[$bulkQueryItem->getIndex()];
             } else {
                 $indices = array_keys($this->getClient()->indices()->getAlias(['index' => $bulkQueryItem->getIndex()]));
-                $this->cachedAliasIndices[$bulkQueryItem->getIndex()] = $indices;
+                $cachedAliasIndices[$bulkQueryItem->getIndex()] = $indices;
             }
             foreach ($indices as $index) {
                 foreach ($bulkQueryItem->getLines($index) as $bulkQueryLine) {
@@ -221,7 +217,7 @@ class ConnectionManager
             $action = key($responseItem);
             $actionResult = reset($responseItem);
 
-            // If there was an error on that item (other than a missing document)
+            // If there was an error on that item
             if (!empty($actionResult['error'])) {
                 $errorsCount++;
                 $this->logger->error(sprintf('Bulk %s item failed', $action), $actionResult);
