@@ -42,18 +42,10 @@ repositoryClass="AppBundle\Document\Repository\ProductRepository"
 
 - `parent` Allows you to specify a parent type ([more info here](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-parent-field.html))
 ```
-TODO: add example
+parent="AppBundle:ParentDoc"
 ```
 
-- `all` Set the _all field ([more info here](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-all-field.html)) 
-```
-all={"enabled":true}
-```
-
-- `dynamicTemplates` Set dynamic_templates ([more info here](https://www.elastic.co/guide/en/elasticsearch/reference/current/dynamic-templates.html))
-
-- `dynamicDateFormats` Set dynamic_date_formats ([more info here](https://www.elastic.co/guide/en/elasticsearch/reference/current/dynamic-field-mapping.html#date-detection))
-
+- `options` Allows to specify any type option supported by Elasticsearch, such as [\_all](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-all-field.html), [dynamic_templates](https://www.elastic.co/guide/en/elasticsearch/reference/current/dynamic-templates.html), [dynamic_date_formats](https://www.elastic.co/guide/en/elasticsearch/reference/current/dynamic-field-mapping.html#date-detection), etc. 
 
 ### Property annotation
 

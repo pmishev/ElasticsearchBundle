@@ -30,30 +30,17 @@ final class Document implements DumperInterface
     public $parent;
 
     /**
+     * Settings directly passed to Elasticsearch client as-is
+     *
      * @var array
      */
-    public $all;
-
-    /**
-     * @var array
-     */
-    public $dynamicTemplates;
-
-    /**
-     * @var array
-     */
-    public $dynamicDateFormats;
+    public $options;
 
     /**
      * {@inheritdoc}
      */
-    public function dump(array $options = [])
+    public function dump(array $settings = [])
     {
-        return [
-            '_parent' => $this->parent,
-            '_all' => $this->all,
-            'dynamic_templates' => $this->dynamicTemplates,
-            'dynamic_date_formats' => $this->dynamicDateFormats,
-        ];
+        return (array) $this->options;
     }
 }
