@@ -6,7 +6,6 @@ use Sineflow\ElasticsearchBundle\Annotation\Property;
 
 /**
  * Class PropertyTest
- * @package Sineflow\ElasticsearchBundle\Tests\Unit\Annotation
  */
 class PropertyTest extends \PHPUnit_Framework_TestCase
 {

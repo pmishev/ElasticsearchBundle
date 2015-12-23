@@ -32,18 +32,18 @@ class RegisterDataProvidersPass implements CompilerPassInterface
 
         foreach ($providers as $providerId => $tags) {
             $documentClass = null;
+
+            foreach ($tags as $attributes) {
+                if (!isset($attributes['type'])) {
+                    throw new \InvalidArgumentException(sprintf('Data provider "%s" must specify the "type" attribute.', $providerId));
+                }
+                $documentClass = $attributes['type'];
+            }
+
             $class = $container->getDefinition($providerId)->getClass();
 
             if (!$class || !$this->isProviderImplementation($class)) {
-                throw new \InvalidArgumentException(sprintf('Elasticsearch provider "%s" with class "%s" must implement ProviderInterface.', $providerId, $class));
-            }
-
-            foreach ($tags as $tag) {
-                if (!isset($tag['type'])) {
-                    throw new \InvalidArgumentException(sprintf('Elasticsearch provider "%s" must specify the "type" attribute.', $providerId));
-                }
-
-                $documentClass = $tag['type'];
+                throw new \InvalidArgumentException(sprintf('Data provider "%s" with class "%s" must implement ProviderInterface.', $providerId, $class));
             }
 
             $registry->addMethodCall('addProvider', array($documentClass, $providerId));

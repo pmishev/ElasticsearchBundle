@@ -2,10 +2,8 @@
 
 namespace Sineflow\ElasticsearchBundle\Tests\Unit\DependencyInjection\Compiler;
 
-use MyProject\Proxies\__CG__\stdClass;
 use Sineflow\ElasticsearchBundle\DependencyInjection\Compiler\AddIndexManagersPass;
 use Sineflow\ElasticsearchBundle\DependencyInjection\Compiler\MappingPass;
-use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadata;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 /**
