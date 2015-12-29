@@ -1,0 +1,36 @@
+# Framework Configuration
+framework:
+    secret: "SUPER-TOP-SECRET"
+    test: ~
+
+sineflow_elasticsearch:
+    connections:
+        default:
+            hosts:
+                - 127.0.0.1:9200
+            profiling: true
+            logging: true
+            bulk_batch_size: 100
+
+    indices:
+        @base:
+            connection: default
+            use_aliases: true
+            settings:
+                refresh_interval: -1
+                number_of_replicas: 0
+
+        foo:
+            extends: @base
+            name: sineflow-esb-test
+            types:
+                - AcmeFooBundle:Customer
+
+        bar:
+            connection: default
+            use_aliases: false
+            name: sineflow-esb-test-bar
+            types:
+                - AcmeBarBundle:Product
+
+services:

@@ -103,7 +103,7 @@ class DocumentIterator implements \Countable, \Iterator
      */
     public function current()
     {
-        return $this->convertToDocument($this->documents[$this->key()]);
+        return isset($this->documents[$this->key()]) ? $this->convertToDocument($this->documents[$this->key()]) : null;
     }
 
     /**

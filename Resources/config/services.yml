@@ -52,7 +52,7 @@ services:
             - [setDocumentDir, ["%sfes.document_dir%"]]
 
     sfes.cache_engine:
-        class: %doctrine_cache.file_system.class%
+        class: Doctrine\Common\Cache\FilesystemCache
         arguments: ["%kernel.cache_dir%/sineflow", ".sineflow.data"]
         public: false
 
@@ -61,7 +61,7 @@ services:
         public: false
 
     sfes.annotations.cached_reader:
-        class: %annotations.cached_reader.class%
+        class: Doctrine\Common\Annotations\CachedReader
         arguments: [@sfes.annotations.reader, @sfes.cache_engine, %kernel.debug%]
         public: false
 
@@ -80,17 +80,17 @@ services:
         public: false
 
     sfes.logger.trace:
-        class: %monolog.logger.class%
+        class: Monolog\Logger
         arguments: ['sfes_trace']
         calls:
             - [pushHandler, [@sfes.logger.collection_handler]]
 
     sfes.logger.log_handler:
-        class: %monolog.handler.rotating_file.class%
+        class: Monolog\Handler\RotatingFileHandler
         arguments: [%sfes.logging.path%, 0, notice]
 
     sfes.logger.log:
-        class: %monolog.logger.class%
+        class: Monolog\Logger
         arguments: ['sfes_log']
         calls:
             - [pushHandler, [@sfes.logger.log_handler]]

@@ -34,14 +34,14 @@ class Product extends AbstractDocument
     public $description;
 
     /**
-     * @var CategoryObject
-     * @ES\Property(type="object", name="category", objectName="AcmeBarBundle:CategoryObject")
+     * @var ObjCategory
+     * @ES\Property(type="object", name="category", objectName="AcmeBarBundle:ObjCategory")
      */
     public $category;
 
     /**
-     * @var CategoryObject[]
-     * @ES\Property(type="object", name="related_categories", multiple=true, objectName="AcmeBarBundle:CategoryObject")
+     * @var ObjCategory[]
+     * @ES\Property(type="object", name="related_categories", multiple=true, objectName="AcmeBarBundle:ObjCategory")
      */
     public $relatedCategories;
 

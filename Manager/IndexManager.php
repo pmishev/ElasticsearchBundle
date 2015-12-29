@@ -2,6 +2,7 @@
 
 namespace Sineflow\ElasticsearchBundle\Manager;
 
+use Elasticsearch\Common\Exceptions\Missing404Exception;
 use Sineflow\ElasticsearchBundle\Document\DocumentInterface;
 use Sineflow\ElasticsearchBundle\Document\Provider\ProviderInterface;
 use Sineflow\ElasticsearchBundle\Document\Provider\ProviderRegistry;
@@ -344,13 +345,17 @@ class IndexManager
      */
     public function dropIndex()
     {
-        if (true === $this->getUseAliases()) {
-            // Delete all physical indices aliased by the read and write aliases
-            $aliasNames = $this->readAlias.','.$this->writeAlias;
-            $indices = $this->getConnection()->getClient()->indices()->getAlias(array('name' => $aliasNames));
-            $this->getConnection()->getClient()->indices()->delete(['index' => implode(',', array_keys($indices))]);
-        } else {
-            $this->getConnection()->getClient()->indices()->delete(['index' => $this->getBaseIndexName()]);
+        try {
+            if (true === $this->getUseAliases()) {
+                // Delete all physical indices aliased by the read and write aliases
+                $aliasNames = $this->readAlias.','.$this->writeAlias;
+                $indices = $this->getConnection()->getClient()->indices()->getAlias(array('name' => $aliasNames));
+                $this->getConnection()->getClient()->indices()->delete(['index' => implode(',', array_keys($indices))]);
+            } else {
+                $this->getConnection()->getClient()->indices()->delete(['index' => $this->getBaseIndexName()]);
+            }
+        } catch (Missing404Exception $e) {
+            // No physical indices exist for the index manager's aliases, or the physical index did not exist
         }
     }
 
