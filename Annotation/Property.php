@@ -44,7 +44,7 @@ final class Property implements DumperInterface
 
     /**
      * Defines if related object will have one or multiple values.
-     * If this value is set to true, ObjectIterator will be provided in the result, as opposed to a Document object
+     * If this value is set to true, ObjectIterator will be provided in the result, as opposed to an ObjectInterface object
      *
      * @var bool
      */

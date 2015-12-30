@@ -30,12 +30,4 @@ abstract class AbstractDocument implements DocumentInterface
      */
     public $parent;
 
-    /**
-     * When document is cloned id is set to null.
-     */
-    public function __clone()
-    {
-        $this->id = null;
-    }
-
 }
