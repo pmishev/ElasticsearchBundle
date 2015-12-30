@@ -214,8 +214,12 @@ class DocumentParser
                 } else {
                     $propertyAccess = DocumentMetadata::PROPERTY_ACCESS_PRIVATE;
                     $camelCaseName = ucfirst(Caser::camel($propertyName));
-                    $getterMethod = 'get'.$camelCaseName;
                     $setterMethod = 'set'.$camelCaseName;
+                    $getterMethod = 'get'.$camelCaseName;
+                    // Allow issers as getters for boolean properties
+                    if ($propertyAnnotation->type === 'boolean' && !$documentReflection->hasMethod($getterMethod)) {
+                        $getterMethod = 'is'.$camelCaseName;
+                    }
                     if ($documentReflection->hasMethod($getterMethod) && $documentReflection->hasMethod($setterMethod)) {
                         $propertyMetadata[$propertyAnnotation->name]['methods'] = [
                             'getter' => $getterMethod,
@@ -251,7 +255,6 @@ class DocumentParser
             AnnotationRegistry::registerFile(__DIR__ . "/../Annotation/{$annotation}.php");
         }
     }
-
 
     /**
      * Returns all defined properties including private from parents.

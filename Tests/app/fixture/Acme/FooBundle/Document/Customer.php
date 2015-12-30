@@ -20,4 +20,27 @@ class Customer extends AbstractDocument
      * @ES\Property(name="name", type="string", options={"index"="not_analyzed"})
      */
     public $name;
+
+    /**
+     * @var boolean
+     *
+     * @ES\Property(name="active", type="boolean")
+     */
+    private $active;
+
+    /**
+     * @return boolean
+     */
+    public function isActive()
+    {
+        return $this->active;
+    }
+
+    /**
+     * @param boolean $active
+     */
+    public function setActive($active)
+    {
+        $this->active = $active;
+    }
 }

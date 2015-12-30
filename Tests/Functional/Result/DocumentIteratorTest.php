@@ -23,6 +23,9 @@ class DocumentIteratorTest extends AbstractElasticsearchTestCase
                     [
                         '_id' => 'doc1',
                         'title' => 'Foo Product',
+                        'category' => [
+                            'title' => 'Bar',
+                        ],
                         'related_categories' => [
                             [
                                 'title' => 'Acme',
@@ -32,6 +35,7 @@ class DocumentIteratorTest extends AbstractElasticsearchTestCase
                     [
                         '_id' => 'doc2',
                         'title' => 'Bar Product',
+                        'category' => null,
                         'related_categories' => [
                             [
                                 'title' => 'Acme',
@@ -46,6 +50,9 @@ class DocumentIteratorTest extends AbstractElasticsearchTestCase
                         'title' => '3rd Product',
                         'related_categories' => [],
                     ],
+                    [
+                        '_id' => '12345',
+                    ]
                 ],
             ],
         ];
@@ -60,16 +67,26 @@ class DocumentIteratorTest extends AbstractElasticsearchTestCase
         $repo = $this->getIndexManager('bar')->getRepository('AcmeBarBundle:Product');
 
         /** @var DocumentIterator $iterator */
-        $iterator = $repo->find(['query' => ['match_all' => []], 'size' => 2], Finder::RESULTS_OBJECT);
+        $iterator = $repo->find(['query' => ['match_all' => []], 'size' => 3], Finder::RESULTS_OBJECT);
 
         $this->assertInstanceOf('Sineflow\ElasticsearchBundle\Result\DocumentIterator', $iterator);
 
-        $this->assertCount(2, $iterator);
+        $this->assertCount(3, $iterator);
 
-        $this->assertEquals(3, $iterator->getTotalCount());
+        $this->assertEquals(4, $iterator->getTotalCount());
 
+        $iteration = 0;
         foreach ($iterator as $document) {
             $categories = $document->relatedCategories;
+
+            if ($iteration === 0) {
+                $this->assertInstanceOf(
+                    'Sineflow\ElasticsearchBundle\Tests\app\fixture\Acme\BarBundle\Document\ObjCategory',
+                    $document->category
+                );
+            } else {
+                $this->assertNull($document->category);
+            }
 
             $this->assertInstanceOf(
                 'Sineflow\ElasticsearchBundle\Tests\app\fixture\Acme\BarBundle\Document\Product',
@@ -83,6 +100,8 @@ class DocumentIteratorTest extends AbstractElasticsearchTestCase
                     $category
                 );
             }
+
+            $iteration++;
         }
     }
 
@@ -95,7 +114,7 @@ class DocumentIteratorTest extends AbstractElasticsearchTestCase
         $repo = $this->getIndexManager('bar')->getRepository('AcmeBarBundle:Product');
 
         /** @var DocumentIterator $iterator */
-        $iterator = $repo->find(['query' => ['match_all' => []]], Finder::RESULTS_OBJECT);
+        $iterator = $repo->find(['query' => ['match_all' => []], 'size' => 3], Finder::RESULTS_OBJECT);
 
         $i = 0;
         $expected = [
@@ -126,6 +145,9 @@ class DocumentIteratorTest extends AbstractElasticsearchTestCase
         $this->assertNull($iterator->current());
     }
 
+    /**
+     * Test that aggregations are returned
+     */
     public function testAggregations()
     {
         /** @var Repository $repo */
@@ -148,6 +170,9 @@ class DocumentIteratorTest extends AbstractElasticsearchTestCase
         $this->assertCount(1, $aggregations['my_count']);
     }
 
+    /**
+     * Test that suggestions are returned
+     */
     public function testSuggestions()
     {
         /** @var Repository $repo */
