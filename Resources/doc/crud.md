@@ -7,14 +7,14 @@ For all steps below we assume that there is an `AppBundle` with the `Product` do
 ```php
 
 <?php
-//AcmeDemoBundle:Content
+//AppBundle:Product
 use Sineflow\ElasticsearchBundle\Annotation as ES;
 use Sineflow\ElasticsearchBundle\Document\AbstractDocument;
 
 /**
- * @ES\Document(type="content")
+ * @ES\Document(type="product")
  */
-class Content extends AbstractDocument
+class Product extends AbstractDocument
 {
     /**
      * @ES\Property(type="string", name="title")
