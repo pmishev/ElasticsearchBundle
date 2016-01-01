@@ -1,7 +1,7 @@
 parameters:
     sfes.logging.path: "%kernel.logs_dir%/%kernel.environment%.sf_elasticsearch.log"
     sfes.profiler_backtrace_enabled: false
-    sfes.profiler.template: SineflowElasticsearchBundle:Profiler:profiler.html.twig
+    sfes.profiler.template: SineflowElasticsearchBundle:Profiler:profiler3.html.twig
     sfes.mlproperty.language_separator: '-'
 
     sfes.provider_self.class: Sineflow\ElasticsearchBundle\Document\Provider\ElasticsearchProvider

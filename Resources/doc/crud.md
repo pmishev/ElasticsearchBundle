@@ -30,7 +30,7 @@ sineflow_elasticsearch:
     indices:
         ...
         products:
-            extends: @base
+            extends: _base
             name: acme_products
             types:
                 - AppBundle:Product

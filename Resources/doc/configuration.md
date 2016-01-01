@@ -17,7 +17,7 @@ sineflow_elasticsearch:
             bulk_batch_size: 1000
 
     indices:
-        @base:
+        _base:
             connection: default
             use_aliases: true
             settings:
@@ -51,7 +51,7 @@ sineflow_elasticsearch:
                             filter: [lowercase]
 
         products:
-            extends: @base
+            extends: _base
             name: dev_products
             types:
                 - AppBundle:Product
@@ -69,7 +69,7 @@ And here is the breakdown:
     * `bulk_batch_size` *(default: 1000)*: This is currently used only when using the **rebuildIndex()** method of the index manager.
     
 * `indices`: Here you define the Elasticsearch indexes you have. The key here is the name of the index manager, which determines how it will be accessible in the application. In the example above, we have an index manager named **products**, which would be accessible as **$container->get('sfes.index.products')**. 
-It is important to note here the use of **'@'** in front of the index manager name. When defined like that, this will be an abstract definition, i.e. no manager will actually be created from that definition. This is very useful when you have common setting for several indices, as you can define a template for them all and not have to duplicate stuff.
+It is important to note here the use of **'_'** in front of the index manager name. When defined like that, this will be an abstract definition, i.e. no manager will actually be created from that definition. This is very useful when you have common setting for several indices, as you can define a template for them all and not have to duplicate stuff.
     * `extends`: You can specify the name of another index manager here in order to inherit its definition.
     * `connection`: The connection under which that index will live. 
     * `use_aliases` *(default: true)*: Whether to setup read and write alias for working with the physical index. Very useful for being able to reindex with no downtime.

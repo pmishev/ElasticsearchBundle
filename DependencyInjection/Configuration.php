@@ -97,8 +97,11 @@ class Configuration implements ConfigurationInterface
             ->beforeNormalization()
                 ->always(function($v) {
                     $templates = [];
+                    if (!is_array($v)) {
+                        return [];
+                    }
                     foreach ($v as $indexManager => $values) {
-                        if ($indexManager[0] == '@') {
+                        if ($indexManager[0] == '_') {
                             $templates[$indexManager] = $values;
                             unset($v[$indexManager]);
                         }
