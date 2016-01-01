@@ -52,7 +52,7 @@ sineflow_elasticsearch:
 
         products:
             extends: @base
-            name: acme_products
+            name: dev_products
             types:
                 - AppBundle:Product
 

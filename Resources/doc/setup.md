@@ -41,16 +41,16 @@ sineflow_elasticsearch:
         default:
             hosts: [127.0.0.1:9200]           
     indices:
-        acme_manager:
-            name: acme
+        customer:
+            name: dev_customer
             connection: default
             types:
-                - AppBundle:AcmeType
+                - AppBundle:Customer
 ```
 
 > This is the very basic example only, for a more detailed description of configuration options, please take a look at the [configuration](configuration.md) chapter.
 
-A couple of things to note in this example: `acme` is the name of the physical index in Elasticsearch and `AppBundle:AcmeType` represents the class where the document type mapping is defined. (more info at [the mapping chapter](mapping.md)).
+A couple of things to note in this example: `dev_customer` is the name of the physical index in Elasticsearch and `AppBundle:Customer` represents the class where the document type mapping is defined. (more info at [the mapping chapter](mapping.md)).
 
 
 ### Step 4: Define your Elasticsearch types as `Document` objects
@@ -88,7 +88,7 @@ class Customer extends AbstractDocument
 Elasticsearch bundle provides several `CLI` commands. One of them is for creating index, run command in your terminal:
 
 ```bash
-    app/console sineflow:es:index:create
+    bin/console sineflow:es:index:create customer
 ```
 
 > More info about the rest of the commands can be found in the [commands chapter](commands.md).
