@@ -13,7 +13,7 @@ sineflow_elasticsearch:
             bulk_batch_size: 100
 
     indices:
-        @base:
+        _base:
             connection: default
             use_aliases: true
             settings:
@@ -21,7 +21,7 @@ sineflow_elasticsearch:
                 number_of_replicas: 0
 
         foo:
-            extends: @base
+            extends: _base
             name: sineflow-esb-test
             types:
                 - AcmeFooBundle:Customer
@@ -30,7 +30,19 @@ sineflow_elasticsearch:
             connection: default
             use_aliases: false
             name: sineflow-esb-test-bar
+            settings:
+                analysis:
+                    analyzer:
+                        default_analyzer:
+                            type: standard
+                        en_analyzer:
+                            type: standard
             types:
                 - AcmeBarBundle:Product
 
 services:
+    app.es.language_provider:
+        class: Sineflow\ElasticsearchBundle\Tests\app\fixture\Acme\BarBundle\LanguageProvider
+        tags:
+            - { name: sfes.language_provider }
+

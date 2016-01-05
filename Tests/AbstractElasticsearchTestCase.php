@@ -4,23 +4,17 @@ namespace Sineflow\ElasticsearchBundle\Tests;
 
 use Elasticsearch\Common\Exceptions\ElasticsearchException;
 use Sineflow\ElasticsearchBundle\Manager\IndexManager;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Base test which creates unique connection to test with.
  */
-abstract class AbstractElasticsearchTestCase extends WebTestCase
+abstract class AbstractElasticsearchTestCase extends AbstractContainerAwareTestCase
 {
     /**
      * @var IndexManager[] Holds used index managers.
      */
     private $indexManagers = [];
-
-    /**
-     * @var ContainerInterface
-     */
-    private $container;
 
     /**
      * {@inheritdoc}
@@ -123,24 +117,6 @@ abstract class AbstractElasticsearchTestCase extends WebTestCase
                 // Do nothing.
             }
         }
-    }
-
-    /**
-     * Returns service container.
-     *
-     * @param bool  $reinitialize  Force kernel reinitialization.
-     * @param array $kernelOptions Options used passed to kernel if it needs to be initialized.
-     *
-     * @return ContainerInterface
-     */
-    protected function getContainer($reinitialize = false, $kernelOptions = [])
-    {
-        if (!$this->container || $reinitialize) {
-            static::bootKernel($kernelOptions);
-            $this->container = static::$kernel->getContainer();
-        }
-
-        return $this->container;
     }
 
     /**

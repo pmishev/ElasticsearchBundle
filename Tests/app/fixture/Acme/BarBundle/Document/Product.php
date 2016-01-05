@@ -4,6 +4,7 @@ namespace Sineflow\ElasticsearchBundle\Tests\app\fixture\Acme\BarBundle\Document
 
 use Sineflow\ElasticsearchBundle\Annotation as ES;
 use Sineflow\ElasticsearchBundle\Document\AbstractDocument;
+use Sineflow\ElasticsearchBundle\Document\MLProperty;
 
 /**
  * Product document for testing.
@@ -68,6 +69,20 @@ class Product extends AbstractDocument
      * @ES\Property(type="date", name="released")
      */
     public $released;
+
+    /**
+     * @var MLProperty
+     *
+     * @ES\Property(
+     *  name="name",
+     *  type="string",
+     *  multilanguage=true,
+     *  options={
+     *      "analyzer":"{lang}_analyzer",
+     *  }
+     * )
+     */
+    public $mlInfo;
 
     /**
      * @var int
