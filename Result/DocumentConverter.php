@@ -101,10 +101,13 @@ class DocumentConverter
             }
 
             if ($propertyMetadata['type'] === 'string' && !empty($propertyMetadata['multilanguage'])) {
-                $objectValue = new MLProperty();
+                $objectValue = null;
                 foreach ($array as $fieldName => $value) {
                     $prefixLength = strlen($esField . $this->languageSeparator);
                     if (substr($fieldName, 0, $prefixLength) === $esField . $this->languageSeparator) {
+                        if (!$objectValue) {
+                            $objectValue = new MLProperty();
+                        }
                         $language = substr($fieldName, $prefixLength);
                         $objectValue->setValue($value, $language);
                     }

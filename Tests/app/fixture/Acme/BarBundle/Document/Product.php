@@ -65,7 +65,7 @@ class Product extends AbstractDocument
     public $limited;
 
     /**
-     * @var \DateTime
+     * @var string
      * @ES\Property(type="date", name="released")
      */
     public $released;
@@ -74,7 +74,7 @@ class Product extends AbstractDocument
      * @var MLProperty
      *
      * @ES\Property(
-     *  name="name",
+     *  name="ml_info",
      *  type="string",
      *  multilanguage=true,
      *  options={
