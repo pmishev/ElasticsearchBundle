@@ -6,8 +6,6 @@ use Sineflow\ElasticsearchBundle\Annotation as ES;
 use Sineflow\ElasticsearchBundle\Document\AbstractDocument;
 
 /**
- * Testing document for representing media.
- *
  * @ES\Document(type="customer");
  */
 class Customer extends AbstractDocument

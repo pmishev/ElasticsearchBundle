@@ -9,27 +9,29 @@ use Sineflow\ElasticsearchBundle\Tests\app\fixture\Acme\BarBundle\Document\Produ
 
 class DocumentConverterTest extends AbstractContainerAwareTestCase
 {
-    public function testAssignArrayToObject()
+    private $fullDocArray = [
+        '_id' => 'doc1',
+        'title' => 'Foo Product',
+        'category' => [
+            'title' => 'Bar',
+        ],
+        'related_categories' => [
+            [
+                'title' => 'Acme',
+            ],
+        ],
+        'ml_info-en' => 'info in English',
+        'ml_info-fr' => 'info in French',
+        'ml_info' => 'should be skipped',
+        'nonexisting' => 'should be skipped',
+    ];
+
+    public function testAssignArrayToObjectWithAllFieldsCorrectlySet()
     {
         $converter = $this->getContainer()->get('sfes.document_converter');
         $metadataCollector = $this->getContainer()->get('sfes.document_metadata_collector');
 
-        // Case 1: Test all fields correctly set
-        $rawDoc = [
-            '_id' => 'doc1',
-            'title' => 'Foo Product',
-            'category' => [
-                'title' => 'Bar',
-            ],
-            'related_categories' => [
-                [
-                    'title' => 'Acme',
-                ],
-            ],
-            'ml_info' => 'should be skipped',
-            'ml_info-en' => 'info in English',
-            'ml_info-fr' => 'info in French',
-        ];
+        $rawDoc = $this->fullDocArray;
 
         $product = new Product();
         $result = $converter->assignArrayToObject(
@@ -48,9 +50,15 @@ class DocumentConverterTest extends AbstractContainerAwareTestCase
         $this->assertEquals('info in English', $product->mlInfo->getValue('en'));
         $this->assertEquals('info in French', $product->mlInfo->getValue('fr'));
 
-        // Case 2: Test empty data
-        $rawDoc = [
-        ];
+        return $product;
+    }
+
+    public function testAssignArrayToObjectWithEmptyFields()
+    {
+        $converter = $this->getContainer()->get('sfes.document_converter');
+        $metadataCollector = $this->getContainer()->get('sfes.document_metadata_collector');
+
+        $rawDoc = [];
 
         $product = new Product();
         $converter->assignArrayToObject(
@@ -62,12 +70,100 @@ class DocumentConverterTest extends AbstractContainerAwareTestCase
         $this->assertNull($product->category);
         $this->assertNull($product->relatedCategories);
         $this->assertNull($product->mlInfo);
-
     }
 
-    public function testConvertToArray()
+    /**
+     * @depends testAssignArrayToObjectWithAllFieldsCorrectlySet
+     */
+    public function testConvertToArray(Product $product)
     {
-        // TODO:
+        $converter = $this->getContainer()->get('sfes.document_converter');
+
+        $arr = $converter->convertToArray($product);
+
+        $this->assertGreaterThanOrEqual(6, count($arr));
+        $this->assertArraySubset($arr, $this->fullDocArray);
+    }
+
+    public function testConvertToDocumentWithSource()
+    {
+        $rawFromEs = array (
+            '_index' => 'sineflow-esb-test-bar',
+            '_type' => 'product',
+            '_id' => 'doc1',
+            '_version' => 1,
+            'found' => true,
+            '_source' =>
+                array (
+                    'title' => 'Foo Product',
+                    'category' =>
+                        array (
+                            'title' => 'Bar',
+                        ),
+                    'related_categories' =>
+                        array (
+                            0 =>
+                                array (
+                                    'title' => 'Acme',
+                                ),
+                        ),
+                    'ml_info-en' => 'info in English',
+                    'ml_info-fr' => 'info in French',
+                ),
+        );
+
+        $converter = $this->getContainer()->get('sfes.document_converter');
+
+        /** @var Product $product */
+        $product = $converter->convertToDocument($rawFromEs, 'AcmeBarBundle:Product');
+
+        $this->assertEquals('Foo Product', $product->title);
+        $this->assertEquals('doc1', $product->id);
+        $this->assertInstanceOf(ObjCategory::class, $product->category);
+        $this->assertContainsOnlyInstancesOf(ObjCategory::class, $product->relatedCategories);
+        $this->assertInstanceOf(MLProperty::class, $product->mlInfo);
+        $this->assertEquals('info in English', $product->mlInfo->getValue('en'));
+        $this->assertEquals('info in French', $product->mlInfo->getValue('fr'));
+    }
+
+    public function testConvertToDocumentWithFields()
+    {
+        $rawFromEs = [
+            '_index' => 'sineflow-esb-test-bar',
+            '_type' => 'product',
+            '_id' => 'doc1',
+            '_score' => 1,
+            'fields' =>
+                array (
+                    'title' =>
+                        array (
+                            0 => 'Foo Product',
+                        ),
+                    'related_categories.title' =>
+                        array (
+                            0 => 'Acme',
+                            1 => 'Bar',
+                        ),
+                    'category.title' =>
+                        array (
+                            0 => 'Bar',
+                        ),
+                    'ml_info-en' =>
+                        array (
+                            0 => 'info in English',
+                        ),
+                ),
+        ];
+
+        $converter = $this->getContainer()->get('sfes.document_converter');
+
+        /** @var Product $product */
+        $product = $converter->convertToDocument($rawFromEs, 'AcmeBarBundle:Product');
+
+        $this->assertEquals('Foo Product', $product->title);
+        $this->assertEquals('doc1', $product->id);
+        $this->assertInstanceOf(MLProperty::class, $product->mlInfo);
+        $this->assertEquals('info in English', $product->mlInfo->getValue('en'));
     }
 
 }

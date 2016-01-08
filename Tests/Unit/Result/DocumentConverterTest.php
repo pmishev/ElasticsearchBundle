@@ -15,7 +15,7 @@ class DocumentConverterTest extends \PHPUnit_Framework_TestCase
 
         $metadata = new DocumentMetadata(
             array (
-                'type' => 'media',
+                'type' => 'product',
                 'properties' =>
                     array (
                         'is_featured' =>

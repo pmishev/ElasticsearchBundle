@@ -9,7 +9,10 @@ use Sineflow\ElasticsearchBundle\Document\MLProperty;
 /**
  * Product document for testing.
  *
- * @ES\Document(type="product")
+ * @ES\Document(
+ *  type="product",
+ *  repositoryClass="Sineflow\ElasticsearchBundle\Tests\app\fixture\Acme\BarBundle\Document\Repository\ProductRepository"
+ * )
  */
 class Product extends AbstractDocument
 {

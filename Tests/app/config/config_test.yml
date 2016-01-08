@@ -25,6 +25,7 @@ sineflow_elasticsearch:
             name: sineflow-esb-test
             types:
                 - AcmeFooBundle:Customer
+                - AcmeFooBundle:Order
 
         bar:
             connection: default
@@ -46,3 +47,9 @@ services:
         tags:
             - { name: sfes.language_provider }
 
+    app.es.data_provider.order:
+        class: Sineflow\ElasticsearchBundle\Tests\app\fixture\Acme\FooBundle\Document\Provider\OrderProvider
+        arguments:
+            - AcmeFooBundle:Order
+        tags:
+            - { name: sfes.provider, type: "AcmeFooBundle:Order" }

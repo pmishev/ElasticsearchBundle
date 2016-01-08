@@ -5,7 +5,6 @@ namespace Sineflow\ElasticsearchBundle\Document\Provider;
 use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Query;
-use Sineflow\ElasticsearchBundle\Mapping\DocumentMetadataCollector;
 
 /**
  * Base doctrine document provider

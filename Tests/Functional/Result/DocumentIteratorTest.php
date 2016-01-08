@@ -31,6 +31,8 @@ class DocumentIteratorTest extends AbstractElasticsearchTestCase
                                 'title' => 'Acme',
                             ],
                         ],
+                        'ml_info-en' => 'info in English',
+                        'ml_info-fr' => 'info in French',
                     ],
                     [
                         '_id' => 'doc2',

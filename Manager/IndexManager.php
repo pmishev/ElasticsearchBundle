@@ -581,7 +581,7 @@ class IndexManager
                 if (!isset($document['_id'])) {
                     throw new \RuntimeException(sprintf('The returned document array must include an "_id" field: (%s)', serialize($document)));
                 }
-                if ($document['_id'] !== $id) {
+                if ($document['_id'] != $id) {
                     throw new \RuntimeException(sprintf('The document id must be "%s", but "%s" was returned from data provider', $id, $document['_id']));
                 }
                 $this->persistRaw($documentClass, $document);

@@ -122,8 +122,8 @@ abstract class AbstractElasticsearchTestCase extends AbstractContainerAwareTestC
     /**
      * Returns index manager instance with injected connection if does not exist creates new one.
      *
-     * @param string $name        Index manager name
-     * @param bool   $createIndex Whether to drop and recreate the index
+     * @param string $name          Index manager name
+     * @param bool   $createIndex   Whether to drop and recreate the index
      *
      * @return IndexManager
      *
@@ -133,31 +133,40 @@ abstract class AbstractElasticsearchTestCase extends AbstractContainerAwareTestC
     {
         $serviceName = sprintf('sfes.index.%s', $name);
 
-        // Looks for cached manager.
-        if (array_key_exists($name, $this->indexManagers)) {
-            $indexManager = $this->indexManagers[$name];
-        } elseif ($this->getContainer()->has($serviceName)) {
-            /** @var IndexManager $indexManager */
-            $indexManager = $this
-                ->getContainer()
-                ->get($serviceName);
-            $this->indexManagers[$name] = $indexManager;
-        } else {
+        if (!$this->getContainer()->has($serviceName)) {
             throw new \LogicException(sprintf('Index manager "%s" does not exist', $name));
         }
 
-        // Drops and creates index.
+        /** @var IndexManager $indexManager */
+        $indexManager = $this
+            ->getContainer()
+            ->get($serviceName);
+
         if ($createIndex) {
+            // Drops and creates index.
             $indexManager->dropIndex();
             $indexManager->createIndex();
+
+            // Populates elasticsearch index with data.
+            $data = $this->getDataArray();
+            if (!empty($data[$name])) {
+                $this->populateElasticsearchWithData($indexManager, $data[$name]);
+            }
         }
 
-        // Populates elasticsearch index with data.
-        $data = $this->getDataArray();
-        if ($createIndex && isset($data[$name]) && !empty($data[$name])) {
-            $this->populateElasticsearchWithData($indexManager, $data[$name]);
-        }
+        $this->indexManagers[$name] = $indexManager;
 
         return $indexManager;
+    }
+
+    /**
+     * Return whether a given index manager has already been created in the current class instance
+     *
+     * @param $name
+     * @return bool
+     */
+    protected function hasCreatedIndexManager($name)
+    {
+        return isset($this->indexManagers[$name]);
     }
 }
