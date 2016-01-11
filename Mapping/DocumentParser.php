@@ -149,7 +149,7 @@ class DocumentParser
      *
      * @return Property
      */
-    public function getPropertyAnnotationData($property)
+    private function getPropertyAnnotationData($property)
     {
         return $this->reader->getPropertyAnnotation($property, self::PROPERTY_ANNOTATION);
     }

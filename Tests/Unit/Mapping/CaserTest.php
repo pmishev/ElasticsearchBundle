@@ -1,0 +1,53 @@
+<?php
+
+namespace Sineflow\ElasticsearchBundle\Tests\Unit\Mapping;
+
+use Sineflow\ElasticsearchBundle\Mapping\Caser;
+
+class CaserTest extends \PHPUnit_Framework_TestCase
+{
+    public function providerForCamel()
+    {
+        $out = [
+            ['foo_bar', 'fooBar'],
+            ['_foo-bar', 'fooBar'],
+            ['Fo0bAr', 'fo0bAr'],
+            ['_f$oo^ba&r_', 'f$oo^ba&r'],
+            [23456, '23456'],
+        ];
+
+        return $out;
+    }
+
+    public function providerForSnake()
+    {
+        $out = [
+            ['FooBar', 'foo_bar'],
+            ['_foo-bar', 'foo_bar'],
+            ['Fo0bAr', 'fo0b_ar'],
+            [23456, '23456'],
+        ];
+
+        return $out;
+    }
+
+    /**
+     * @param string $input
+     * @param string $expected
+     * @dataProvider providerForCamel
+     */
+    public function testCamel($input, $expected)
+    {
+        $this->assertEquals($expected, Caser::camel($input));
+    }
+
+    /**
+     * @param string $input
+     * @param string $expected
+     * @dataProvider providerForSnake
+     */
+    public function testSnake($input, $expected)
+    {
+        $this->assertEquals($expected, Caser::snake($input));
+    }
+}
